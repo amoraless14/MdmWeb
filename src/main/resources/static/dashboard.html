@@ -1,0 +1,1321 @@
+<style>
+    /* ================= DASHBOARD ================= */
+
+    .dashboard-container {
+
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        padding: 4px;
+        min-height: calc(100vh - 90px);
+
+        width: 1600px;
+        min-width: 1600px;
+
+    }
+
+    /* ================= KPIs ================= */
+    .dashboard-kpis {
+
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 16px;
+
+    }
+
+    .dashboard-kpi {
+
+        background: #fff;
+        border-radius: 12px;
+        padding: 18px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+
+        display: flex;
+        align-items: center;
+        gap: 18px;
+
+        min-height: 110px;
+
+        transition: .2s;
+
+    }
+
+    .dashboard-kpi:hover {
+
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px rgba(0, 0, 0, .10);
+
+    }
+
+    /* ===== NUEVO ===== */
+
+    .dashboard-kpi-icon {
+
+        width: 64px;
+        height: 64px;
+
+        border-radius: 50%;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        flex-shrink: 0;
+
+    }
+
+    .dashboard-kpi-icon.blue {
+
+        background: #2563eb;
+
+    }
+
+    .dashboard-kpi-icon.green {
+
+        background: #22c55e;
+
+    }
+
+    .dashboard-kpi-icon.red {
+
+        background: #ef4444;
+
+    }
+
+    .dashboard-kpi-icon.yellow {
+
+        background: #facc15;
+
+    }
+
+    .dashboard-kpi-icon.purple {
+
+        background: #7c3aed;
+
+    }
+
+    .dashboard-kpi-icon i {
+
+        font-size: 30px;
+        color: #fff;
+
+    }
+
+    .dashboard-kpi-body {
+
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+
+        flex: 1;
+
+    }
+
+    .dashboard-kpi-title {
+
+        color: #495057;
+        font-size: .80rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .5px;
+
+    }
+
+    .dashboard-kpi-value {
+
+        margin-top: 6px;
+
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+
+        color: #212529;
+
+    }
+
+    .dashboard-kpi-percent {
+
+        margin-top: 4px;
+
+        color: #6c757d;
+        font-size: .85rem;
+
+    }
+
+    /* ===== ESTOS SE QUEDAN PARA LAS OTRAS TARJETAS ===== */
+
+    .dashboard-kpi span {
+
+        color: #6c757d;
+        font-size: .82rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+
+    }
+
+    .dashboard-kpi h2 {
+
+        margin-top: 8px;
+        margin-bottom: 0;
+
+        font-size: 2.25rem;
+        font-weight: 700;
+
+    }
+
+    /* ================= FILAS ================= */
+
+    .dashboard-row {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    /* ================= CARDS ================= */
+    .dashboard-card {
+
+        background: #fff;
+        border-radius: 12px;
+
+        padding: clamp(12px, 1vw, 18px);
+
+        box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+
+        display: flex;
+        flex-direction: column;
+
+        height: 390px;
+
+        overflow: hidden;
+
+    }
+
+    .dashboard-card h6 {
+
+        margin-bottom: 18px;
+
+        font-size: 15px;
+        font-weight: 700;
+
+        text-transform: uppercase;
+
+    }
+
+    .dashboard-card canvas {
+
+        flex: 1;
+
+    }
+
+    /* ================= GRAFICAS ================= */
+
+    .dashboard-chart {
+
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        gap: 20px;
+
+        flex: 1;
+
+        overflow: hidden;
+
+    }
+
+    .dashboard-chart-left {
+
+        width: 38%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        overflow: hidden;
+
+    }
+
+    .dashboard-chart-left canvas {
+
+        max-width: 180px !important;
+        max-height: 180px !important;
+
+    }
+
+    .dashboard-chart-right {
+
+        width: 58%;
+        min-width: 0;
+
+    }
+
+    canvas {
+
+        display: block;
+
+    }
+
+    /* ================= LISTAS DASHBOARD ================= */
+
+    .dashboard-lista {
+
+        width: 100%;
+
+    }
+
+    .dashboard-header,
+    .dashboard-item,
+    .dashboard-total {
+
+        display: grid;
+
+        grid-template-columns: minmax(0, 1fr) 120px 70px;
+
+        column-gap: 10px;
+
+        align-items: center;
+
+    }
+
+    .dashboard-total {
+
+        display: grid;
+
+        grid-template-columns: 1fr 90px 70px;
+
+        align-items: center;
+
+        column-gap: 10px;
+
+        padding-top: 14px;
+
+        margin-top: 6px;
+
+        border-top: 2px solid #dcdcdc;
+
+        font-weight: 700;
+
+    }
+
+
+    .dashboard-header {
+
+        display: grid;
+
+        grid-template-columns: 1fr 90px 70px;
+
+        align-items: center;
+
+        background: #eef3f8;
+
+        padding: 10px 0;
+
+        margin-bottom: 8px;
+
+        border-radius: 6px;
+
+        color: #4b5563;
+
+        font-size: 13px;
+
+        font-weight: 700;
+
+    }
+
+    .dashboard-header span:first-child {
+
+        padding-left: 22px;
+
+    }
+
+
+    .dashboard-header span:nth-child(3) {
+
+        text-align: center;
+
+        padding-right: 7px;
+
+    }
+
+    .dashboard-item {
+
+        display: grid;
+
+        grid-template-columns: 1fr 90px 70px;
+
+        align-items: center;
+
+        column-gap: 10px;
+
+        padding: 12px 0;
+
+        border-bottom: 1px solid #ececec;
+
+    }
+
+    .dashboard-item-nombre {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 10px;
+
+        min-width: 0;
+
+    }
+
+    .dashboard-item-nombre-texto {
+
+        white-space: normal;
+
+    }
+
+
+    .dashboard-total {
+
+        padding: 12px;
+
+        margin-top: 6px;
+
+        border-top: 2px solid #dee2e6;
+
+        font-weight: 700;
+
+    }
+
+    .dashboard-item span:first-child,
+    .dashboard-total span:first-child {
+
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+    }
+
+    .dashboard-item {
+
+        display: grid;
+
+        grid-template-columns: 1fr 90px 70px;
+
+        align-items: center;
+
+        column-gap: 10px;
+
+        padding: 12px 0;
+
+        border-bottom: 1px solid #ececec;
+
+    }
+
+    .dashboard-item-nombre {
+
+        display: flex;
+
+        align-items: center;
+
+        gap: 10px;
+
+        min-width: 0;
+
+    }
+
+
+
+    .dashboard-color {
+
+        width: 10px;
+
+        height: 10px;
+
+        border-radius: 50%;
+
+        flex-shrink: 0;
+
+    }
+
+    .dashboard-total {
+
+        display: grid;
+
+        grid-template-columns: 1fr 90px 70px;
+
+        align-items: center;
+
+        column-gap: 10px;
+
+        padding-top: 14px;
+
+        margin-top: 6px;
+
+        border-top: 2px solid #dcdcdc;
+
+        font-weight: 700;
+
+    }
+
+    .dashboard-item span:nth-child(2),
+    .dashboard-item span:nth-child(3),
+    .dashboard-total span:nth-child(2),
+    .dashboard-total span:nth-child(3) {
+
+        text-align: center;
+
+    }
+
+    /* ================= ALERTAS ================= */
+
+    .dashboard-alertas {
+
+        display: grid;
+
+        grid-template-columns: repeat(2, 1fr);
+
+        gap: 22px;
+
+        margin-top: 20px;
+
+    }
+
+    .dashboard-alertas span {
+
+        color: #666;
+        font-size: 14px;
+
+    }
+
+    .dashboard-alertas strong {
+
+        display: block;
+
+        margin-top: 6px;
+
+        font-size: 34px;
+
+        font-weight: 700;
+
+    }
+
+    #dash-cel {
+
+        color: #f39c12;
+
+    }
+
+    #dash-hand {
+
+        color: #8e44ad;
+
+    }
+
+    #dash-calidad {
+
+        color: #27ae60;
+
+    }
+
+    #dash-general {
+
+        color: #2980b9;
+
+    }
+
+    .dashboard-card,
+    .dashboard-chart,
+    .dashboard-chart-left,
+    .dashboard-chart-right {
+
+        min-width: 0;
+
+    }
+
+    /* ================= CHART ESTADO RED ================= */
+
+    #chartEstadoRed {
+
+        width: 100% !important;
+        height: 250px !important;
+
+    }
+
+    /* ================= RESPONSIVE ================= */
+
+
+
+
+
+
+    /* ================= SCROLL PARA MONITORES PEQUEÑOS ================= */
+
+    .dashboard-wrapper {
+
+        width: 100%;
+        height: 100%;
+
+        overflow: auto;
+
+    }
+
+    #vista-dashboard {
+
+        flex: 1;
+
+        min-height: 0;
+
+        overflow: auto;
+
+    }
+
+    .dashboard-color {
+
+        width: 10px;
+
+        height: 10px;
+
+        border-radius: 50%;
+
+        flex-shrink: 0;
+
+    }
+
+    .dashboard-chart-right b {
+
+        color: #212529 !important;
+
+    }
+
+    .dashboard-chart-right small {
+
+        color: #6c757d !important;
+
+    }
+
+    .dashboard-alerta-titulo {
+
+        display: flex;
+        align-items: center;
+        gap: 14px;
+
+        margin: 8px 0 30px;
+
+        font-size: 22px;
+        font-weight: 700;
+
+        color: #333;
+
+    }
+
+    .dashboard-alerta-titulo i {
+
+        font-size: 36px;
+        color: #ef4444;
+
+    }
+
+    .dashboard-alertas {
+
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+
+        gap: 34px 40px;
+
+        margin-bottom: 18px;
+
+    }
+
+    .dashboard-alertas span {
+
+        display: block;
+
+        font-size: 16px;
+        color: #5f6368;
+
+        margin-bottom: 8px;
+
+    }
+
+    .dashboard-alertas strong {
+
+        display: block;
+
+        font-size: 36px;
+        line-height: 1;
+
+        font-weight: 700;
+
+    }
+
+    .dashboard-alerta-total {
+
+        margin-top: auto;
+
+        padding-top: 20px;
+
+        border-top: 1px solid #dcdcdc;
+
+        display: flex;
+        justify-content: center;
+        align-items: center;
+
+        gap: 8px;
+
+        color: #ef4444;
+
+    }
+
+    .dashboard-alerta-total span {
+
+        font-size: 24px;
+        font-weight: 700;
+
+    }
+
+    .dashboard-alerta-total strong {
+
+        font-size: 26px;
+        font-weight: 700;
+
+        color: #ef4444;
+
+    }
+
+    .dashboard-cargador {
+
+        font-size: .98rem;
+        font-weight: 600;
+        margin-top: 4px;
+
+    }
+
+    .dashboard-cargador strong {
+
+        color: #495057;
+
+    }
+
+    .dashboard-cargador .sep {
+
+        color: #adb5bd;
+        margin: 0 8px;
+
+    }
+
+    #dash-cel {
+
+        color: #f59e0b;
+        font-weight: 700;
+
+    }
+
+    #dash-hand {
+
+        color: #8b5cf6;
+        font-weight: 700;
+
+    }
+
+    #dash-calidad {
+
+        color: #22c55e;
+        font-weight: 700;
+
+    }
+
+    #dash-general {
+
+        color: #3b82f6;
+        font-weight: 700;
+
+    }
+
+    #dash-alertas-total {
+
+        color: #ef4444;
+        font-weight: 700;
+        font-size: 1.05rem;
+
+    }
+
+    /* ================= ESTADO BATERÍA ================= */
+
+    .dashboard-card-title {
+
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        font-size: 1.05rem;
+        font-weight: 700;
+
+        margin-bottom: 24px;
+
+    }
+
+    .dashboard-bateria {
+
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+
+    }
+
+    .dashboard-bateria-item {
+
+        display: grid;
+        grid-template-columns: 95px 1fr 90px;
+        align-items: center;
+        gap: 14px;
+
+    }
+
+    .dashboard-bateria-item span:first-child {
+
+        font-size: .92rem;
+        font-weight: 600;
+        color: #495057;
+
+    }
+
+    .dashboard-barra {
+
+        height: 22px;
+
+        background: #edf2f7;
+
+        border-radius: 30px;
+
+        overflow: hidden;
+
+    }
+
+    .dashboard-fill {
+
+        height: 100%;
+        width: 0%;
+
+        border-radius: 30px;
+
+        transition: .4s;
+
+    }
+
+    .dashboard-fill.verde {
+
+        background: linear-gradient(90deg, #1fae42, #35d057);
+
+    }
+
+    .dashboard-fill.lima {
+
+        background: linear-gradient(90deg, #84cc16, #b7e445);
+
+    }
+
+    .dashboard-fill.amarillo {
+
+        background: linear-gradient(90deg, #f59e0b, #ffd54f);
+
+    }
+
+    .dashboard-fill.rojo {
+
+        background: linear-gradient(90deg, #ef4444, #ff7676);
+
+    }
+
+    .dashboard-bateria-item strong {
+
+        text-align: right;
+
+        font-size: .95rem;
+
+        color: #495057;
+
+    }
+
+    .dashboard-bateria-info {
+
+        margin-top: 24px;
+
+        padding: 12px 16px;
+
+        border-radius: 10px;
+
+        background: #eef4ff;
+
+        color: #2563eb;
+
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        font-weight: 600;
+
+    }
+
+    .dashboard-bateria-total {
+
+        margin-top: 20px;
+
+        text-align: center;
+
+        font-size: 1.05rem;
+        font-weight: 700;
+
+    }
+
+    .dashboard-bateria-total strong {
+
+        color: #212529;
+
+    }
+</style>
+
+
+<div class="dashboard-wrapper">
+
+    <div class="dashboard-container">
+
+        <!-- Indicadores -->
+
+        <div class="dashboard-kpis">
+
+            <div class="dashboard-kpi">
+
+                <div class="dashboard-kpi-icon blue">
+                    <i class="bi bi-tablet"></i>
+                </div>
+
+                <div class="dashboard-kpi-body">
+
+                    <div class="dashboard-kpi-title">
+                        DISPOSITIVOS
+                    </div>
+
+                    <div class="dashboard-kpi-value" id="dash-total">
+                        0
+                    </div>
+
+                    <div class="dashboard-kpi-percent">
+                        100% del total
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="dashboard-kpi">
+
+                <div class="dashboard-kpi-icon green">
+                    <i class="bi bi-wifi"></i>
+                </div>
+
+                <div class="dashboard-kpi-body">
+
+                    <div class="dashboard-kpi-title">
+                        EN LÍNEA
+                    </div>
+
+                    <div class="dashboard-kpi-value" id="dash-online">
+                        0
+                    </div>
+
+                    <div class="dashboard-kpi-percent" id="dash-online-porcentaje">
+                        0.00% del total
+                    </div>
+
+                </div>
+
+            </div>
+            <div class="dashboard-kpi">
+
+                <div class="dashboard-kpi-icon red">
+                    <i class="bi bi-wifi-off"></i>
+                </div>
+
+                <div class="dashboard-kpi-body">
+
+                    <div class="dashboard-kpi-title">
+                        FUERA DE LINE
+                    </div>
+
+                    <div class="dashboard-kpi-value" id="dash-offline">
+                        0
+                    </div>
+
+                    <div class="dashboard-kpi-percent" id="dash-offline-porcentaje">
+                        0.00% del total
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="dashboard-kpi">
+
+                <div class="dashboard-kpi-icon yellow">
+                    <i class="bi bi-battery-half"></i>
+                </div>
+
+                <div class="dashboard-kpi-body">
+
+                    <div class="dashboard-kpi-title">
+                        BATERÍA BAJA (&lt;20%)
+                    </div>
+
+                    <div class="dashboard-kpi-value" id="dash-bateria">
+                        0
+                    </div>
+
+                    <div class="dashboard-kpi-percent" id="dash-bateria-porcentaje">
+                        0.00% del total
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="dashboard-kpi">
+
+                <div class="dashboard-kpi-icon purple">
+                    <i class="bi bi-plug"></i>
+                </div>
+
+                <div class="dashboard-kpi-body">
+
+                    <div class="dashboard-kpi-title">
+                        CARGADOR DESCONECTADO
+                    </div>
+
+                    <div class="dashboard-kpi-percent dashboard-cargador">
+
+                        <strong>Cel:</strong>
+                        <span id="dash-cel">0</span>
+
+                        <span class="sep">|</span>
+
+                        <strong>Hand:</strong>
+                        <span id="dash-hand">0</span>
+
+                    </div>
+
+                    <div class="dashboard-kpi-percent dashboard-cargador">
+
+                        <strong>Cali:</strong>
+                        <span id="dash-calidad">0</span>
+
+                        <span class="sep">|</span>
+
+                        <strong>Gen:</strong>
+                        <span id="dash-general">0</span>
+
+                        <span class="sep"></span>
+
+                        <strong>Total:</strong>
+                        <span id="dash-alertas-total">0</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Primera fila -->
+
+        <div class="dashboard-row">
+
+            <div class="dashboard-card">
+
+                <h6>Planta General</h6>
+
+                <div class="dashboard-chart">
+
+                    <div class="dashboard-chart-left">
+
+                        <canvas id="chartPlantaGeneral"></canvas>
+
+                    </div>
+
+                    <div class="dashboard-chart-right">
+
+                        <div class="dashboard-lista">
+
+                            <div class="dashboard-header">
+
+                                <span>Planta</span>
+
+                                <span>Dispositivos</span>
+
+                                <span>%</span>
+
+                            </div>
+
+                            <div id="tablaPlantaGeneral"></div>
+
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="dashboard-card">
+
+                <h6>Planta Central</h6>
+
+                <div class="dashboard-chart">
+
+                    <div class="dashboard-chart-left">
+
+                        <canvas id="chartPlantaPc"></canvas>
+
+                    </div>
+
+                    <div class="dashboard-chart-right">
+
+                        <div class="dashboard-lista">
+
+                            <div class="dashboard-header">
+
+                                <span>Equipo</span>
+
+                                <span>Dispositivos</span>
+
+                                <span>%</span>
+
+                            </div>
+
+                            <div id="tablaPlantaPc"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="dashboard-card">
+
+                <h6>Planta Fajas</h6>
+
+                <div class="dashboard-chart">
+
+                    <div class="dashboard-chart-left">
+
+                        <canvas id="chartPlantaPf"></canvas>
+
+                    </div>
+
+                    <div class="dashboard-chart-right">
+
+                        <div class="dashboard-lista">
+
+                            <div class="dashboard-header">
+
+                                <span>Equipo</span>
+
+                                <span>Dispositivos</span>
+
+                                <span>%</span>
+
+                            </div>
+
+                            <div id="tablaPlantaPf"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- Segunda fila -->
+
+        <div class="dashboard-row">
+
+            <div class="dashboard-card">
+
+                <h6>Categorías General</h6>
+
+                <div class="dashboard-chart">
+
+                    <div class="dashboard-chart-left">
+
+                        <canvas id="chartCategorias"></canvas>
+
+                    </div>
+
+                    <div class="dashboard-chart-right">
+
+                        <div class="dashboard-lista">
+
+                            <div class="dashboard-header">
+
+                                <span>General</span>
+
+                                <span>Dispositivos</span>
+
+                                <span>%</span>
+
+                            </div>
+
+                            <div id="tablaCategorias"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="dashboard-card">
+
+                <h6>Estado de Red</h6>
+
+                <div class="dashboard-chart">
+
+                    <div class="dashboard-chart-left">
+
+                        <canvas id="chartEstadoRed"></canvas>
+
+                    </div>
+
+                    <div class="dashboard-chart-right">
+
+                        <div class="dashboard-lista">
+
+                            <div class="dashboard-header">
+
+                                <span>Estado</span>
+
+                                <span>Dispositivos</span>
+
+                                <span>%</span>
+
+                            </div>
+
+                            <div id="tablaEstadoRed"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="dashboard-card">
+
+                <div class="dashboard-card-title">
+
+                    <i class="bi bi-battery-half text-warning"></i>
+
+                    <span>ESTADO DE BATERÍA (GENERAL)</span>
+
+                </div>
+
+                <div class="dashboard-bateria">
+
+                    <div class="dashboard-bateria-item">
+
+                        <span>100% - 80%</span>
+
+                        <div class="dashboard-barra">
+
+                            <div id="barra-bat-alta" class="dashboard-fill verde" style="width:0%">
+                            </div>
+
+                        </div>
+
+                        <strong id="bat-alta">
+                            0 (0%)
+                        </strong>
+
+                    </div>
+
+                    <div class="dashboard-bateria-item">
+
+                        <span>79% - 50%</span>
+
+                        <div class="dashboard-barra">
+
+                            <div id="barra-bat-media" class="dashboard-fill lima" style="width:0%">
+                            </div>
+
+                        </div>
+
+                        <strong id="bat-media">
+                            0 (0%)
+                        </strong>
+
+                    </div>
+
+                    <div class="dashboard-bateria-item">
+
+                        <span>49% - 20%</span>
+
+                        <div class="dashboard-barra">
+
+                            <div id="barra-bat-baja" class="dashboard-fill amarillo" style="width:0%">
+                            </div>
+
+                        </div>
+
+                        <strong id="bat-baja">
+                            0 (0%)
+                        </strong>
+
+                    </div>
+
+                    <div class="dashboard-bateria-item">
+
+                        <span>19% - 0%</span>
+
+                        <div class="dashboard-barra">
+
+                            <div id="barra-bat-critica" class="dashboard-fill rojo" style="width:0%">
+                            </div>
+
+                        </div>
+
+                        <strong id="bat-critica">
+                            0 (0%)
+                        </strong>
+
+                    </div>
+
+                </div>
+
+              <!--<div class="dashboard-bateria-info">
+
+                    <i class="bi bi-info-circle-fill"></i>
+
+                    <span>
+
+                        <strong id="bat-sindatos">0</strong>
+                        dispositivos sin datos de batería
+
+                    </span>
+
+                </div>--> 
+
+                <div class="dashboard-bateria-total">
+
+                    Total:
+                    <strong id="bat-total">0</strong>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</div>

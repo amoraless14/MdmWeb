@@ -1,0 +1,103 @@
+<div class="modal fade" id="modalHistorialCargador" tabindex="-1" aria-labelledby="tituloHistorialCargador"
+    aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title" id="tituloHistorialCargador">
+                    Historial de desconexiones
+                </h5>
+
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Información de la tablet -->
+                <div class="row mb-3">
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Activo</label>
+                        <input type="text" class="form-control" id="historialActivo" readonly>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Modelo</label>
+                        <input type="text" class="form-control" id="historialModelo" readonly>
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Empleado</label>
+                        <input type="text" class="form-control" id="historialEmpleado" readonly>
+                    </div>
+
+                </div>
+
+                <hr>
+
+                <!-- Filtros -->
+                <div class="row align-items-end mb-4">
+
+                    <div class="col-md-3">
+                        <label class="form-label">Desde</label>
+                        <input type="date" class="form-control" id="fechaDesde">
+                    </div>
+
+                    <div class="col-md-3">
+                        <label class="form-label">Hasta</label>
+                        <input type="date" class="form-control" id="fechaHasta">
+                    </div>
+
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" id="btnBuscarHistorial">
+                            Buscar
+                        </button>
+                    </div>
+
+                </div>
+
+                <!-- Tabla -->
+                <div class="table-responsive">
+
+                    <table class="table table-bordered table-hover align-middle">
+
+                        <thead class="table-light">
+
+                            <tr>
+                                <th>Fecha y hora</th>
+                                <th>Batería</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="tablaHistorialCargador">
+
+                            <tr>
+                                <td colspan="2" class="text-center text-muted">
+                                    Sin registros
+                                </td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+
+                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    Cerrar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
