@@ -1,85 +1,91 @@
-<div class="modal fade" id="modalHistorialCargador" tabindex="-1" aria-labelledby="tituloHistorialCargador"
-    aria-hidden="true">
+<style>
+#modalHistorialCargador .modal-title {
+    font-weight: 700;
+}
 
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+#modalHistorialCargador .form-label {
+    font-weight: 700;
+}
+
+#modalHistorialCargador .table thead th {
+    font-weight: 700;
+    position: sticky;
+    top: 0;
+    background: #f8f9fa;
+    z-index: 2;
+}
+
+#modalHistorialCargador .table tbody td {
+    font-weight: 600;
+}
+
+#modalHistorialCargador .btn {
+    font-weight: 700;
+}
+
+#modalHistorialCargador .table-responsive {
+    max-height: 280px;
+    overflow-y: auto;
+}
+    
+</style>
+<div class="modal fade" id="modalHistorialCargador" tabindex="-1" aria-hidden="true">
+
+    <div class="modal-dialog modal-lg modal-dialog-centered">
 
         <div class="modal-content">
 
             <div class="modal-header">
-                <h5 class="modal-title" id="tituloHistorialCargador">
+                <h5 class="modal-title">
+                    <i class="bi bi-clock-history me-2"></i>
                     Historial de desconexiones
                 </h5>
 
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal">
+                </button>
             </div>
 
             <div class="modal-body">
 
-                <!-- Información de la tablet -->
-                <div class="row mb-3">
+                <div class="row g-3 align-items-end mb-4">
 
                     <div class="col-md-4">
-                        <label class="form-label fw-bold">Activo</label>
-                        <input type="text" class="form-control" id="historialActivo" readonly>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">Modelo</label>
-                        <input type="text" class="form-control" id="historialModelo" readonly>
-                    </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label fw-bold">Empleado</label>
-                        <input type="text" class="form-control" id="historialEmpleado" readonly>
-                    </div>
-
-                </div>
-
-                <hr>
-
-                <!-- Filtros -->
-                <div class="row align-items-end mb-4">
-
-                    <div class="col-md-3">
                         <label class="form-label">Desde</label>
                         <input type="date" class="form-control" id="fechaDesde">
                     </div>
 
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <label class="form-label">Hasta</label>
                         <input type="date" class="form-control" id="fechaHasta">
                     </div>
 
-                    <div class="col-md-2">
-                        <button class="btn btn-primary w-100" id="btnBuscarHistorial">
+                    <div class="col-md-4">
+                        <button type="button" class="btn btn-primary w-100" id="btnBuscarHistorial">
+                            <i class="bi bi-search me-1"></i>
                             Buscar
                         </button>
                     </div>
 
                 </div>
 
-                <!-- Tabla -->
                 <div class="table-responsive">
 
-                    <table class="table table-bordered table-hover align-middle">
+                    <table class="table table-hover align-middle mb-0">
 
                         <thead class="table-light">
-
                             <tr>
                                 <th>Fecha y hora</th>
+                                <th>Estado</th>
                                 <th>Batería</th>
                             </tr>
-
                         </thead>
 
                         <tbody id="tablaHistorialCargador">
-
                             <tr>
-                                <td colspan="2" class="text-center text-muted">
+                                <td colspan="3" class="text-center text-muted py-4">
                                     Sin registros
                                 </td>
                             </tr>
-
                         </tbody>
 
                     </table>
@@ -90,7 +96,7 @@
 
             <div class="modal-footer">
 
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     Cerrar
                 </button>
 

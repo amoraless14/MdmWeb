@@ -118,7 +118,6 @@ public class TabletService {
                     }
                 }
 
-              
                 tablet.setEstadoCargador(estadoNuevo);
             }
 
@@ -143,6 +142,18 @@ public class TabletService {
             return tabletRepository.save(datosRecibidos);
 
         }
+    }
+
+    public List<Object[]> obtenerHistorialCargador(
+            Long tabletId,
+            String fechaDesde,
+            String fechaHasta) {
+
+        return tabletRepository.obtenerHistorialCargador(
+                tabletId,
+                fechaDesde,
+                fechaHasta);
+
     }
 
     public Page<TabletDashboardProjection> obtenerDashboard(

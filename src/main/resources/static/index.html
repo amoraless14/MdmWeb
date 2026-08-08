@@ -597,6 +597,16 @@
         #vista-dispositivos {
             zoom: .80;
         }
+
+
+        #modalHistorialCargador .table {
+            min-width: 0 !important;
+            width: 100%;
+        }
+
+        #modalHistorialCargador .table-responsive {
+            overflow-x: hidden;
+        }
     </style>
 </head>
 
@@ -669,7 +679,7 @@
             <div class="d-flex gap-2">
 
                 <button id="btnActualizar" class="btn btn-primary btn-sm shadow-sm px-3"
-                    onclick="probarModal()">
+                    onclick="actualizarVistaActual()">
 
                     <i class="bi bi-arrow-repeat me-1"></i>
 
@@ -3364,14 +3374,26 @@
                     console.log("GPS WS DESCONECTADO");
                 };
             }
-            document.addEventListener('DOMContentLoaded', async () => {
+
+
+            document.addEventListener("DOMContentLoaded", async () => {
 
                 await cargarModales();
 
-                bootstrapModal = new bootstrap.Modal(document.getElementById('modalEditor'));
+                document.getElementById("btnBuscarHistorial").addEventListener("click", () => {
+
+                    if (tabletHistorialActual != null) {
+                        cargarHistorialCargador(tabletHistorialActual);
+                    }
+
+                });
+
+                console.log("Después de cargar:");
+                console.log(document.getElementById("modalHistorialCargador"));
+
+                bootstrapModal = new bootstrap.Modal(document.getElementById("modalEditor"));
 
                 const modalElement = document.getElementById("modalPoliticaTablet");
-
                 document.body.appendChild(modalElement);
 
                 modalPoliticaTablet = new bootstrap.Modal(modalElement);
@@ -3381,25 +3403,23 @@
                 );
 
                 cargarUltimaVista();
-
             });
 
-          function probarModal() {
 
-    const elemento = document.getElementById("modalHistorialCargador");
 
-    console.log(elemento);
+            async function abrirHistorialCargador(idTablet) {
 
-    if (!elemento) {
-        alert("El modal NO existe");
-        return;
-    }
+                tabletHistorialActual = idTablet;
 
-    const modal = new bootstrap.Modal(elemento);
+                await cargarHistorialCargador(idTablet);
 
-    modal.show();
+                const elemento = document.getElementById("modalHistorialCargador");
 
-}
+                const modal = bootstrap.Modal.getOrCreateInstance(elemento);
+
+                modal.show();
+
+            }
 
 
             let paginaDispositivos = 0;
@@ -3540,9 +3560,15 @@
             <div class="small-info text-primary"><i class="bi bi-clock"></i> ON: ${t.uptime || '---'}</div>
         </td>
         <td class="small">
-            <div class="${t.estado_cargador?.includes('Conectado') ? 'text-success' : 'text-danger'} fw-bold">
-                <i class="bi bi-plug"></i> ${t.estado_cargador}
-            </div>
+             <div
+        class="${t.estado_cargador?.includes('Conectado') ? 'text-success' : 'text-danger'} fw-bold"
+        ondblclick="abrirHistorialCargador(${t.id})"
+        style="cursor:pointer;"
+        title="Doble clic para ver historial">
+
+        <i class="bi bi-plug"></i> ${t.estado_cargador}
+
+    </div>
             <div class="${t.estado_wifi?.includes('Conectado') ? 'text-primary' : 'text-danger'} fw-bold">
                 <i class="bi bi-wifi"></i> ${t.estado_wifi}
             </div>
@@ -6190,8 +6216,8 @@
         <script src="/tareas.js"></script>
 
 
-        <script src="/modals.js"></script>
-      
+        <script src="/modales.js"></script>
+
 </body>
 
 </html>

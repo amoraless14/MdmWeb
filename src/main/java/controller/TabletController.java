@@ -79,6 +79,19 @@ public class TabletController {
         return ResponseEntity.ok(tablet);
     }
 
+    @GetMapping("/{id}/historial-cargador")
+    public List<Object[]> obtenerHistorialCargador(
+            @PathVariable Long id,
+            @RequestParam(required = false) String fechaDesde,
+            @RequestParam(required = false) String fechaHasta) {
+
+        return tabletService.obtenerHistorialCargador(
+                id,
+                fechaDesde,
+                fechaHasta);
+
+    }
+
     @GetMapping("/all")
     public Page<TabletDashboardProjection> obtenerTodas(
 

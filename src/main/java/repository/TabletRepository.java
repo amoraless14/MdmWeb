@@ -562,4 +562,20 @@ public interface TabletRepository extends JpaRepository<Tablet, Long> {
             ORDER BY nombre
             """, nativeQuery = true)
     List<Object[]> obtenerGraficaEstadoRed();
+
+    @Query(value = """
+            SELECT
+                TO_CHAR(fecha_evento, 'DD/MM/YYYY HH24:MI:SS') AS fecha_evento,
+                estado_cargador,
+                porcentaje_bateria
+            FROM "monitoreo tablet".historial_cargador
+            WHERE tablet_id = :tabletId
+              AND (:fechaDesde IS NULL OR fecha_evento >= CAST(:fechaDesde AS DATE))
+              AND (:fechaHasta IS NULL OR fecha_evento < (CAST(:fechaHasta AS DATE) + INTERVAL '1 day'))
+            ORDER BY fecha_evento DESC
+            """, nativeQuery = true)
+    List<Object[]> obtenerHistorialCargador(
+            @Param("tabletId") Long tabletId,
+            @Param("fechaDesde") String fechaDesde,
+            @Param("fechaHasta") String fechaHasta);
 }
