@@ -241,6 +241,7 @@
                         <select id="cmbTipoTarea" class="form-select">
 
                             <option value="REINICIO">Reinicio</option>
+                            <option value="ACTUALIZAR_APP">Actualizar APP</option>
 
                         </select>
 
@@ -274,6 +275,23 @@
                             </div>
 
                         </div>
+
+                    </div>
+
+
+                    <div class="col-12" id="contenedorUrlApk" style="display:none;">
+
+                        <label class="form-label">
+                            URL del APK
+                        </label>
+
+                        <input type="text" id="txtUrlApk" class="form-control"
+                            value="https://github.com/amoraless14/MonitoreoTablets/releases/download/V1.2/Monitoreo.apk"
+                            placeholder="URL del APK">
+
+                        <small class="text-muted">
+                            Dirección desde donde las tablets descargarán la actualización.
+                        </small>
 
                     </div>
                     <div class="col-12">
@@ -511,7 +529,7 @@
 <!-- Modal Selección de Dispositivos -->
 <div class="modal fade" id="modalDispositivos" tabindex="-1">
 
-    <div class="modal-dialog modal-xl">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
 
         <div class="modal-content">
 
@@ -521,41 +539,166 @@
                     Seleccionar dispositivos
                 </h5>
 
-                <button class="btn-close" data-bs-dismiss="modal"></button>
+                <button
+                    class="btn-close"
+                    data-bs-dismiss="modal">
+                </button>
 
             </div>
+
 
             <div class="modal-body">
 
-                <table class="table table-hover align-middle">
+                <!-- BUSCADOR -->
+                <div class="row g-2 mb-3">
 
-                    <thead class="table-light">
+                    <div class="col-md-9">
 
-                        <tr>
-                            <th style="width:50px"></th>
-                            <th>Activo</th>
-                            <th>Equipo</th>
-                            <th>Modelo</th>
-                            <th>Categoría</th>
-                        </tr>
+                        <div class="input-group">
 
-                    </thead>
+                            <span class="input-group-text">
+                                <i class="bi bi-search"></i>
+                            </span>
 
-                    <tbody id="tablaSeleccionDispositivos"></tbody>
+                            <input
+                                type="text"
+                                id="txtBuscarDispositivoTarea"
+                                class="form-control"
+                                placeholder="Buscar por activo, equipo, modelo o categoría...">
 
-                </table>
+                        </div>
+
+                    </div>
+
+
+                    <div class="col-md-3">
+
+                        <select
+                            id="cmbRegistrosSelector"
+                            class="form-select">
+
+                            <option value="25" selected>25 registros</option>
+                            <option value="50">50 registros</option>
+                            <option value="100">100 registros</option>
+
+                        </select>
+
+                    </div>
+
+                </div>
+
+
+                <!-- TABLA -->
+                <div
+                    class="border rounded"
+                    style="height: 50vh; overflow-y: auto;">
+
+                    <table class="table table-hover align-middle mb-0">
+
+                        <thead class="table-light sticky-top">
+
+                            <tr>
+                                <th style="width:50px"></th>
+                                <th>Activo</th>
+                                <th>Equipo</th>
+                                <th>Modelo</th>
+                                <th>Categoría</th>
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="tablaSeleccionDispositivos">
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <!-- INFORMACIÓN + PAGINACIÓN -->
+                <div
+                    class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+
+                    <div
+                        id="infoPaginacionSelector"
+                        class="text-muted small">
+
+                        Mostrando 0 dispositivos
+
+                    </div>
+
+
+                    <div class="d-flex align-items-center gap-2">
+
+                        <button
+                            type="button"
+                            id="btnAnteriorSelector"
+                            class="btn btn-sm btn-outline-secondary"
+                            onclick="cambiarPaginaSelector(-1)">
+
+                            <i class="bi bi-chevron-left"></i>
+                            Anterior
+
+                        </button>
+
+
+                        <span
+                            id="paginaActualSelector"
+                            class="small fw-semibold">
+
+                            Página 1 de 1
+
+                        </span>
+
+
+                        <button
+                            type="button"
+                            id="btnSiguienteSelector"
+                            class="btn btn-sm btn-outline-secondary"
+                            onclick="cambiarPaginaSelector(1)">
+
+                            Siguiente
+                            <i class="bi bi-chevron-right"></i>
+
+                        </button>
+
+                    </div>
+
+                </div>
 
             </div>
 
+
             <div class="modal-footer">
 
+                <div class="me-auto text-muted">
 
-                <button class="btn btn-secondary" data-bs-dismiss="modal">
+                    Seleccionados:
+
+                    <strong id="cantidadDispositivosSeleccionados">
+                        0
+                    </strong>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal">
+
                     Cancelar
+
                 </button>
 
-                <button class="btn btn-primary" onclick="confirmarDispositivos()">
+
+                <button
+                    type="button"
+                    class="btn btn-primary"
+                    onclick="confirmarDispositivos()">
+
                     Aceptar
+
                 </button>
 
             </div>
@@ -568,7 +711,7 @@
 
 <div class="modal fade" id="modalDetalleTarea" tabindex="-1">
 
-    <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
 
         <div class="modal-content">
 

@@ -184,6 +184,22 @@ public class TabletController {
         return tabletService.obtenerTablets();
     }
 
+    @GetMapping("/lista-paginada")
+    public Page<Tablet> obtenerTabletsPaginadas(
+
+            @RequestParam(defaultValue = "0") int page,
+
+            @RequestParam(defaultValue = "25") int size,
+
+            @RequestParam(defaultValue = "") String buscar) {
+
+        Pageable pageable = PageRequest.of(page, size);
+
+        return tabletService.obtenerTabletsSelector(
+                buscar,
+                pageable);
+    }
+
     @PostMapping("/{id}/location")
     public void recibirUbicacion(
             @PathVariable Long id,

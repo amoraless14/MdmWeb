@@ -561,4 +561,13 @@ public class TabletService {
 
         return tabletRepository.findAll();
     }
+
+    public Page<Tablet> obtenerTabletsSelector(
+            String buscar,
+            Pageable pageable) {
+
+        return tabletRepository.obtenerTabletsSelector(
+                buscar == null ? "" : buscar,
+                pageable);
+    }
 }

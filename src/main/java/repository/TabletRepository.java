@@ -578,4 +578,40 @@ public interface TabletRepository extends JpaRepository<Tablet, Long> {
             @Param("tabletId") Long tabletId,
             @Param("fechaDesde") String fechaDesde,
             @Param("fechaHasta") String fechaHasta);
+
+    @Query(value = """
+            SELECT d.*
+            FROM "monitoreo tablet".dispositivos d
+            WHERE
+                :buscar = ''
+                OR LOWER(COALESCE(d.activo, ''))
+                    LIKE LOWER(CONCAT('%', :buscar, '%'))
+                OR LOWER(COALESCE(d.device_name, ''))
+                    LIKE LOWER(CONCAT('%', :buscar, '%'))
+                OR LOWER(COALESCE(d.model, ''))
+                    LIKE LOWER(CONCAT('%', :buscar, '%'))
+                OR LOWER(COALESCE(d.categoria, ''))
+                    LIKE LOWER(CONCAT('%', :buscar, '%'))
+            ORDER BY d.id ASC
+            """,
+
+            countQuery = """
+                    SELECT COUNT(*)
+                    FROM "monitoreo tablet".dispositivos d
+                    WHERE
+                        :buscar = ''
+                        OR LOWER(COALESCE(d.activo, ''))
+                            LIKE LOWER(CONCAT('%', :buscar, '%'))
+                        OR LOWER(COALESCE(d.device_name, ''))
+                            LIKE LOWER(CONCAT('%', :buscar, '%'))
+                        OR LOWER(COALESCE(d.model, ''))
+                            LIKE LOWER(CONCAT('%', :buscar, '%'))
+                        OR LOWER(COALESCE(d.categoria, ''))
+                            LIKE LOWER(CONCAT('%', :buscar, '%'))
+                    """,
+
+            nativeQuery = true)
+    Page<Tablet> obtenerTabletsSelector(
+            @Param("buscar") String buscar,
+            Pageable pageable);
 }

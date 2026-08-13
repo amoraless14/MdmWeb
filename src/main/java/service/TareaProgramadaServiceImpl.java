@@ -81,7 +81,7 @@ public class TareaProgramadaServiceImpl implements TareaProgramadaService {
 
         tarea = tareaProgramadaRepository.save(tarea);
 
-        int total = 0;
+        int total = crearDispositivosDeTarea(tarea, dto);
 
         programar(tarea.getId());
 
@@ -288,10 +288,53 @@ public class TareaProgramadaServiceImpl implements TareaProgramadaService {
             dispositivo.setEstado(EstadoTareaDispositivo.ENVIADA);
             tareaProgramadaDispositivoRepository.save(dispositivo);
 
-            boolean ack = MdmSocketHandler.enviarOrdenConAck(
-                    dispositivo.getTablet().getId().toString(),
-                    "{\"pending_command\":\"reboot\"}",
-                    "reboot");
+            boolean ack;
+
+            switch (tarea.getTipoTarea()) {
+
+                case REINICIO -> {
+
+                    ack = MdmSocketHandler.enviarOrdenConAck(
+                            dispositivo.getTablet().getId().toString(),
+                            "{\"pending_command\":\"reboot\"}",
+                            "reboot");
+                }
+
+                case ACTUALIZAR_APP -> {
+
+                    String apkUrl = tarea.getParametros();
+
+                    if (apkUrl == null || apkUrl.isBlank()) {
+
+                        System.out.println(
+                                "Tarea " + tarea.getId()
+                                        + " no tiene URL del APK");
+
+                        ack = false;
+
+                    } else {
+
+                        System.out.println(
+                                "Actualizando tablet "
+                                        + dispositivo.getTablet().getId()
+                                        + " desde "
+                                        + apkUrl);
+
+                        ack = MdmSocketHandler.enviarActualizacionConAck(
+                                dispositivo.getTablet().getId().toString(),
+                                apkUrl);
+                    }
+                }
+
+                default -> {
+
+                    System.out.println(
+                            "Tipo de tarea todavía no implementado: "
+                                    + tarea.getTipoTarea());
+
+                    ack = false;
+                }
+            }
 
             if (ack) {
 

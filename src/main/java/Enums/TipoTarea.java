@@ -3,6 +3,7 @@ package Enums;
 public enum TipoTarea {
 
     REINICIO,
+    ACTUALIZAR_APP,
     INSTALAR_APLICACION,
     DESINSTALAR_APLICACION,
     BLOQUEAR_PANTALLA,
@@ -11,5 +12,4 @@ public enum TipoTarea {
     ACTUALIZAR_POLITICAS,
     OBTENER_UBICACION,
     FORMATEAR_DISPOSITIVO
-
 }

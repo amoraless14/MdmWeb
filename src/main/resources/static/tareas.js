@@ -26,6 +26,9 @@ function iniciarTareas() {
     document.getElementById("cmbFrecuencia")
         .addEventListener("change", cambiarFrecuencia);
 
+    document.getElementById("cmbTipoTarea")
+        .addEventListener("change", cambiarTipoTarea);
+
 
 }
 
@@ -44,6 +47,8 @@ function abrirModalNuevaTarea() {
 
     document.getElementById("cmbTipoTarea").value = "REINICIO";
     document.getElementById("cmbDestinoTarea").value = "TODAS";
+
+    cambiarTipoTarea();
 
     document.getElementById("txtFechaTarea").value = "";
     document.getElementById("txtHoraTarea").value = "";
@@ -256,13 +261,35 @@ async function guardarTarea() {
 
     }
 
+    const tipoTarea =
+        document.getElementById("cmbTipoTarea").value;
+
+    let parametros = "";
+
+    if (tipoTarea === "ACTUALIZAR_APP") {
+
+        parametros =
+            document.getElementById("txtUrlApk").value.trim();
+
+        if (parametros === "") {
+
+            Swal.fire({
+                icon: "warning",
+                title: "URL requerida",
+                text: "Debe ingresar la URL del APK."
+            });
+
+            return;
+        }
+    }
+
     const tarea = {
 
         nombre: document.getElementById("txtNombreTarea").value,
 
         descripcion: document.getElementById("txtDescripcionTarea").value,
 
-        tipoTarea: document.getElementById("cmbTipoTarea").value,
+        tipoTarea: tipoTarea,
 
         destinoTarea: destino,
 
@@ -278,7 +305,7 @@ async function guardarTarea() {
 
         diaMes: diaMes,
 
-        parametros: "",
+        parametros: parametros,
 
         dispositivos: dispositivos
 
@@ -504,6 +531,14 @@ async function editarTarea(id) {
     document.getElementById("cmbTipoTarea").value = t.tipoTarea;
     document.getElementById("cmbDestinoTarea").value = t.destinoTarea;
 
+    cambiarTipoTarea();
+
+    if (t.tipoTarea === "ACTUALIZAR_APP") {
+        document.getElementById("txtUrlApk").value =
+            t.parametros || "https://github.com/amoraless14/MonitoreoTablets/releases/download/V1.2/Monitoreo.apk";
+    }
+
+
     cambiarDestino();
 
     setTimeout(() => {
@@ -636,68 +671,418 @@ let categorias = [];
 let dispositivosSeleccionados = [];
 
 
-async function abrirSelectorDispositivos() {
 
-    if (tablets.length === 0) {
+async function cargarDispositivosSelector() {
 
-        const res = await fetch("/devices/lista");
+    const tbody = document.getElementById(
+        "tablaSeleccionDispositivos"
+    );
 
-        tablets = await res.json();
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="5" class="text-center py-4">
+                Cargando dispositivos...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        const url =
+            `/devices/lista-paginada` +
+            `?page=${paginaSelector}` +
+            `&size=${registrosSelector}` +
+            `&buscar=${encodeURIComponent(buscarSelector)}`;
+
+        const res = await fetch(url);
+
+        if (!res.ok) {
+            throw new Error("Error cargando dispositivos");
+        }
+
+        const data = await res.json();
+
+        totalPaginasSelector = data.totalPages;
+
+        tbody.innerHTML = "";
+
+        if (data.content.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="text-center text-muted py-4">
+                        No se encontraron dispositivos
+                    </td>
+                </tr>
+            `;
+
+        } else {
+
+            data.content.forEach(t => {
+
+                const seleccionado =
+                    dispositivosSeleccionados.includes(t.id);
+
+                tbody.innerHTML += `
+                    <tr>
+
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="chkDispositivo"
+                                value="${t.id}"
+                                ${seleccionado ? "checked" : ""}>
+                        </td>
+
+                        <td>${t.activo ?? ""}</td>
+
+                        <td>${t.deviceName ?? ""}</td>
+
+                        <td>${t.model ?? ""}</td>
+
+                        <td>${t.categoria ?? ""}</td>
+
+                    </tr>
+                `;
+            });
+        }
+
+        actualizarPaginacionSelector(
+            data.number,
+            data.totalPages,
+            data.totalElements
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center text-danger py-4">
+                    Error al cargar dispositivos
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function actualizarPaginacionSelector(
+    pagina,
+    totalPaginas,
+    totalElementos
+) {
+
+    const inicio =
+        totalElementos === 0
+            ? 0
+            : (pagina * registrosSelector) + 1;
+
+    const fin = Math.min(
+        (pagina + 1) * registrosSelector,
+        totalElementos
+    );
+
+    document.getElementById(
+        "infoPaginacionSelector"
+    ).textContent =
+        `Mostrando ${inicio}-${fin} de ${totalElementos}`;
+
+
+    document.getElementById(
+        "paginaActualSelector"
+    ).textContent =
+        `Página ${pagina + 1} de ${Math.max(totalPaginas, 1)}`;
+
+
+    document.getElementById(
+        "btnAnteriorSelector"
+    ).disabled =
+        pagina <= 0;
+
+
+    document.getElementById(
+        "btnSiguienteSelector"
+    ).disabled =
+        pagina >= totalPaginas - 1;
+}
+
+
+async function cambiarPaginaSelector(direccion) {
+
+    guardarSeleccionPaginaActual();
+
+    const nuevaPagina =
+        paginaSelector + direccion;
+
+    if (
+        nuevaPagina < 0 ||
+        nuevaPagina >= totalPaginasSelector
+    ) {
+        return;
     }
 
-    const tbody = document.getElementById("tablaSeleccionDispositivos");
+    paginaSelector = nuevaPagina;
 
-    tbody.innerHTML = "";
+    await cargarDispositivosSelector();
+}
 
-    tablets.forEach(t => {
+function guardarSeleccionPaginaActual() {
 
-        const marcado = dispositivosSeleccionados.includes(t.id)
-            ? "checked"
-            : "";
+    document.querySelectorAll(
+        "#tablaSeleccionDispositivos .chkDispositivo"
+    ).forEach(check => {
 
-        tbody.innerHTML += `
-    <tr>
+        const id = Number(check.value);
 
-        <td>
-            <input class="form-check-input dispositivo-check"
-                type="checkbox"
-                value="${t.id}"
-                ${marcado}>
-        </td>
+        if (check.checked) {
 
-        <td>${t.activo ?? ""}</td>
+            if (!dispositivosSeleccionados.includes(id)) {
+                dispositivosSeleccionados.push(id);
+            }
 
-        <td>${t.deviceName ?? ""}</td>
+        } else {
 
-        <td>${t.model ?? ""}</td>
-
-        <td>${t.categoria ?? ""}</td>
-
-    </tr>
-    `;
+            dispositivosSeleccionados =
+                dispositivosSeleccionados.filter(
+                    x => x !== id
+                );
+        }
     });
+
+    document.getElementById(
+        "cantidadDispositivosSeleccionados"
+    ).textContent =
+        dispositivosSeleccionados.length;
+}
+
+
+let paginaSelector = 0;
+let totalPaginasSelector = 0;
+let registrosSelector = 25;
+let buscarSelector = "";
+let timeoutBusquedaSelector = null;
+
+
+async function abrirSelectorDispositivos() {
+
+    paginaSelector = 0;
+    buscarSelector = "";
+
+    document.getElementById("txtBuscarDispositivoTarea").value = "";
+    document.getElementById("cmbRegistrosSelector").value =
+        registrosSelector;
+
+    await cargarDispositivosSelector();
 
     modalDispositivos.show();
 }
 
+
+async function cargarDispositivosSelector() {
+
+    const tbody =
+        document.getElementById("tablaSeleccionDispositivos");
+
+    tbody.innerHTML = `
+        <tr>
+            <td colspan="4" class="text-center py-4">
+                Cargando dispositivos...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        const url =
+            `/devices/lista-paginada` +
+            `?page=${paginaSelector}` +
+            `&size=${registrosSelector}` +
+            `&buscar=${encodeURIComponent(buscarSelector)}`;
+
+        const res = await fetch(url);
+
+        if (!res.ok) {
+            throw new Error("Error cargando dispositivos");
+        }
+
+        const pagina = await res.json();
+
+        totalPaginasSelector = pagina.totalPages;
+
+        tbody.innerHTML = "";
+
+        if (pagina.content.length === 0) {
+
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4"
+                        class="text-center text-muted py-4">
+                        No se encontraron dispositivos
+                    </td>
+                </tr>
+            `;
+
+        } else {
+
+            pagina.content.forEach(t => {
+
+                const marcado =
+                    dispositivosSeleccionados.includes(t.id)
+                        ? "checked"
+                        : "";
+
+                tbody.innerHTML += `
+                    <tr>
+
+                        <td>
+                            <input
+                                class="form-check-input chkDispositivo"
+                                type="checkbox"
+                                value="${t.id}"
+                                ${marcado}>
+                        </td>
+
+                        <td>${t.activo ?? ""}</td>
+
+                        <td>${t.model ?? ""}</td>
+
+                        <td>${t.categoria ?? ""}</td>
+
+                    </tr>
+                `;
+            });
+        }
+
+        actualizarPaginacionSelector(
+            pagina.number,
+            pagina.totalPages,
+            pagina.totalElements
+        );
+
+        actualizarCantidadSeleccionados();
+
+    } catch (error) {
+
+        console.error(error);
+
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4"
+                    class="text-center text-danger py-4">
+                    Error al cargar dispositivos
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+function guardarSeleccionPaginaActual() {
+
+    document.querySelectorAll(
+        "#tablaSeleccionDispositivos .chkDispositivo"
+    ).forEach(check => {
+
+        const id = Number(check.value);
+
+        if (check.checked) {
+
+            if (!dispositivosSeleccionados.includes(id)) {
+                dispositivosSeleccionados.push(id);
+            }
+
+        } else {
+
+            dispositivosSeleccionados =
+                dispositivosSeleccionados.filter(
+                    x => x !== id
+                );
+        }
+    });
+
+    actualizarCantidadSeleccionados();
+}
+
+
+function actualizarCantidadSeleccionados() {
+
+    document.getElementById(
+        "cantidadDispositivosSeleccionados"
+    ).textContent = dispositivosSeleccionados.length;
+}
+
+
 function confirmarDispositivos() {
 
-    dispositivosSeleccionados = [];
+    guardarSeleccionPaginaActual();
 
-    document.querySelectorAll(".dispositivo-check:checked")
-        .forEach(x => {
-
-            dispositivosSeleccionados.push(
-                Number(x.value)
-            );
-
-        });
-
-    document.getElementById("resumenDispositivos").innerHTML =
-        dispositivosSeleccionados.length + " dispositivo(s) seleccionado(s)";
+    document.getElementById(
+        "resumenDispositivos"
+    ).textContent =
+        dispositivosSeleccionados.length +
+        " dispositivo(s) seleccionado(s)";
 
     modalDispositivos.hide();
 }
+
+
+function actualizarPaginacionSelector(
+    pagina,
+    totalPaginas,
+    totalElementos
+) {
+
+    const inicio =
+        totalElementos === 0
+            ? 0
+            : (pagina * registrosSelector) + 1;
+
+    const fin = Math.min(
+        (pagina + 1) * registrosSelector,
+        totalElementos
+    );
+
+    document.getElementById(
+        "infoPaginacionSelector"
+    ).textContent =
+        `Mostrando ${inicio}-${fin} de ${totalElementos}`;
+
+    document.getElementById(
+        "paginaActualSelector"
+    ).textContent =
+        `Página ${pagina + 1} de ${Math.max(totalPaginas, 1)}`;
+
+    document.getElementById(
+        "btnAnteriorSelector"
+    ).disabled = pagina <= 0;
+
+    document.getElementById(
+        "btnSiguienteSelector"
+    ).disabled =
+        pagina >= totalPaginas - 1;
+}
+
+
+async function cambiarPaginaSelector(direccion) {
+
+    guardarSeleccionPaginaActual();
+
+    const nuevaPagina =
+        paginaSelector + direccion;
+
+    if (
+        nuevaPagina < 0 ||
+        nuevaPagina >= totalPaginasSelector
+    ) {
+        return;
+    }
+
+    paginaSelector = nuevaPagina;
+
+    await cargarDispositivosSelector();
+}
+
 
 async function verDetalleTarea(id) {
 
@@ -923,3 +1308,100 @@ function cambiarFrecuencia() {
     }
 
 }
+
+
+function cambiarTipoTarea() {
+
+    const tipo = document.getElementById("cmbTipoTarea").value;
+
+    const contenedor =
+        document.getElementById("contenedorUrlApk");
+
+    if (tipo === "ACTUALIZAR_APP") {
+
+        contenedor.style.display = "block";
+
+        document.getElementById("txtUrlApk").value =
+            "https://github.com/amoraless14/MonitoreoTablets/releases/download/V1.2/Monitoreo.apk";
+
+    } else {
+
+        contenedor.style.display = "none";
+
+        document.getElementById("txtUrlApk").value = "";
+    }
+}
+
+function filtrarDispositivosTarea() {
+
+    const texto = document
+        .getElementById("txtBuscarDispositivoTarea")
+        .value
+        .toLowerCase()
+        .trim();
+
+    const filas = document.querySelectorAll(
+        "#tablaSeleccionDispositivos tr"
+    );
+
+    filas.forEach(fila => {
+
+        const contenido = fila.textContent
+            .toLowerCase();
+
+        fila.style.display =
+            contenido.includes(texto)
+                ? ""
+                : "none";
+    });
+}
+
+
+
+
+
+
+document.addEventListener("input", function (e) {
+
+    if (e.target.id !== "txtBuscarDispositivoTarea") {
+        return;
+    }
+
+    clearTimeout(timeoutBusquedaSelector);
+
+    timeoutBusquedaSelector = setTimeout(async () => {
+
+        guardarSeleccionPaginaActual();
+
+        buscarSelector = e.target.value.trim();
+
+        paginaSelector = 0;
+
+        await cargarDispositivosSelector();
+
+    }, 300);
+});
+
+
+document.addEventListener("change", async function (e) {
+
+    if (e.target.id === "cmbRegistrosSelector") {
+
+        guardarSeleccionPaginaActual();
+
+        registrosSelector =
+            Number(e.target.value);
+
+        paginaSelector = 0;
+
+        await cargarDispositivosSelector();
+
+        return;
+    }
+
+
+    if (e.target.classList.contains("chkDispositivo")) {
+
+        guardarSeleccionPaginaActual();
+    }
+});
