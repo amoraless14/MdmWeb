@@ -3942,8 +3942,16 @@
                 filtrarApps();
             }
 
+            let accionMasivaApps = null;
+
+
             // Para bloquear o desbloquear todas las apps de un solo clic
             function seleccionarTodasApps(bloquear) {
+
+                accionMasivaApps = bloquear
+                    ? "BLOQUEAR_TODAS"
+                    : "PERMITIR_TODAS";
+
                 document.querySelectorAll('.check-app').forEach(check => {
                     check.checked = bloquear;
                 });
@@ -4281,7 +4289,8 @@
                     apps_bloqueadas: appsBloqueadasString,
                     config_reinicio: configReinicio,
                     restricciones: JSON.stringify(restricciones),
-                    urls_permitidas: JSON.stringify(configWeb)
+                    urls_permitidas: JSON.stringify(configWeb),
+                    accion_masiva_apps: accionMasivaApps
                 };
 
                 try {
@@ -4293,7 +4302,7 @@
                     });
 
                     if (res.ok) {
-
+                        accionMasivaApps = null;
                         bootstrapModal.hide();
                     } else {
                         alert('Error al guardar en el servidor.');

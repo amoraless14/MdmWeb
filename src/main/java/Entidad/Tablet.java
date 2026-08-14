@@ -94,6 +94,10 @@ public class Tablet {
     @JsonProperty("apps_reportadas")
     private String appsReportadas;
 
+    @Transient
+    @JsonProperty("accion_masiva_apps")
+    private String accionMasivaApps;
+
     @Column(name = "apps_bloqueadas", columnDefinition = "TEXT")
     @JsonProperty("apps_bloqueadas")
     private String appsBloqueadas;

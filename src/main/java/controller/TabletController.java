@@ -424,10 +424,40 @@ public class TabletController {
             System.out.println("URLS = " + config.getUrlsPermitidas());
             System.out.println("========================================");
 
-            // RESTO DE CONFIGURACIONES (SÍ SE GUARDAN)
+            // =============================================
+            // CONFIGURACIÓN NORMAL / ACCIONES MASIVAS APPS
+            // =============================================
+
+            String accionMasivaApps = config.getAccionMasivaApps();
+            String appsBloqueadasOriginal = config.getAppsBloqueadas();
+
+            boolean esAccionMasiva = "PERMITIR_TODAS".equals(accionMasivaApps) ||
+                    "BLOQUEAR_TODAS".equals(accionMasivaApps);
+
+            // Si es PERMITIR TODAS o BLOQUEAR TODAS,
+            // NO guardamos ese estado temporal como política permanente.
+            if (esAccionMasiva) {
+                config.setAppsBloqueadas(null);
+            }
+
+            // Guardar las demás configuraciones normalmente
             Tablet tabletActualizada = tabletService.actualizarConfiguracionRemota(id, config);
 
             tabletActualizada.setPendingCommand(null);
+
+            // Para el WebSocket sí mandamos la acción masiva
+            if (esAccionMasiva) {
+
+                tabletActualizada.setAppsBloqueadas(
+                        appsBloqueadasOriginal);
+
+                tabletActualizada.setAccionMasivaApps(
+                        accionMasivaApps);
+
+            } else {
+
+                tabletActualizada.setAccionMasivaApps(null);
+            }
 
             String jsonResponse = objectMapper.writeValueAsString(tabletActualizada);
 
@@ -435,7 +465,9 @@ public class TabletController {
                     id.toString(),
                     jsonResponse);
 
-            System.out.println("WEBSOCKET ENVIADO A TABLET " + id);
+            System.out.println(
+                    "WEBSOCKET ENVIADO A TABLET " + id +
+                            " | ACCION MASIVA = " + accionMasivaApps);
 
             return tabletActualizada;
 
