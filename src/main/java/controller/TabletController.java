@@ -15,27 +15,18 @@ import Dto.LocationDTO;
 import java.util.stream.Collectors;
 import com.example.monitoreo.MdmSocketHandler;
 import service.GpsHistoryService;
+import service.ReglaAppsService;
 import Dto.PolicyDTO;
-
 import java.io.IOException;
 import java.util.List;
 import exception.GpsTrackingAlreadyActiveException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import java.util.Map;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.PageRequest;
-
-import org.springframework.http.ResponseEntity;
-
-import java.io.IOException;
-
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -51,9 +42,14 @@ public class TabletController {
     @Autowired
     private GpsHistoryService gpsHistoryService;
 
+    @Autowired
+    private ReglaAppsService reglaAppsService;
+
     // La app llama a /devices/register
     @PostMapping("/register")
     public ResponseEntity<?> registrar(@RequestBody Tablet tablet) {
+
+        boolean dispositivoNuevo = tabletRepository.findByActivo(tablet.getActivo()).isEmpty();
 
         Tablet t = tabletService.procesarHeartbeat(tablet);
 
@@ -61,7 +57,47 @@ public class TabletController {
             return ResponseEntity.badRequest().body("Activo obligatorio");
         }
 
-        return ResponseEntity.ok(t);
+        Map<String, Object> respuesta = new java.util.LinkedHashMap<>();
+
+        respuesta.put("id", t.getId());
+        respuesta.put("activo", t.getActivo());
+
+        if (dispositivoNuevo) {
+
+            var packages = reglaAppsService.obtenerReglaEfectiva(t);
+
+            respuesta.put("apps_rule", packages);
+
+            System.out.println(
+                    "VINCULACION NUEVA | ACTIVO=" +
+                            t.getActivo() +
+                            " | REGLA ENVIADA=" +
+                            packages.size());
+
+        } else {
+
+            System.out.println(
+                    "REVINCULACION | ACTIVO=" +
+                            t.getActivo() +
+                            " | NO SE MODIFICA REGLA DE APPS");
+        }
+
+        return ResponseEntity.ok(respuesta);
+    }
+
+    @GetMapping("/{id}/apps-regla")
+    public ResponseEntity<?> obtenerAppsRegla(
+            @PathVariable Long id) {
+
+        Tablet tablet = tabletRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+
+        var packages = reglaAppsService.obtenerReglaEfectiva(tablet);
+
+        return ResponseEntity.ok(
+                Map.of(
+                        "activo", tablet.getActivo(),
+                        "packages", packages));
     }
 
     // La app llama a /devices/{id}/heartbeat
@@ -430,6 +466,7 @@ public class TabletController {
 
             String accionMasivaApps = config.getAccionMasivaApps();
             String appsBloqueadasOriginal = config.getAppsBloqueadas();
+            var appsModificadas = config.getAppsModificadas();
 
             boolean esAccionMasiva = "PERMITIR_TODAS".equals(accionMasivaApps) ||
                     "BLOQUEAR_TODAS".equals(accionMasivaApps);
@@ -454,10 +491,21 @@ public class TabletController {
                 tabletActualizada.setAccionMasivaApps(
                         accionMasivaApps);
 
+                // Una acción masiva NO es un cambio individual
+                tabletActualizada.setAppsModificadas(null);
+
             } else {
 
                 tabletActualizada.setAccionMasivaApps(null);
+
+                // Cambios individuales realizados desde la WEB
+                tabletActualizada.setAppsModificadas(
+                        appsModificadas);
             }
+
+            System.out.println(
+                    "APPS MODIFICADAS WEB = " +
+                            appsModificadas);
 
             String jsonResponse = objectMapper.writeValueAsString(tabletActualizada);
 

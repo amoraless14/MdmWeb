@@ -5,7 +5,8 @@ import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.time.LocalDateTime;
-
+import java.util.List;
+import java.util.Map;
 import org.hibernate.annotations.DynamicUpdate;
 
 @Entity
@@ -97,6 +98,10 @@ public class Tablet {
     @Transient
     @JsonProperty("accion_masiva_apps")
     private String accionMasivaApps;
+
+    @Transient
+    @JsonProperty("apps_modificadas")
+    private List<Map<String, String>> appsModificadas;
 
     @Column(name = "apps_bloqueadas", columnDefinition = "TEXT")
     @JsonProperty("apps_bloqueadas")

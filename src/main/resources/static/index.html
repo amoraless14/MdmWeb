@@ -607,6 +607,32 @@
         #modalHistorialCargador .table-responsive {
             overflow-x: hidden;
         }
+
+
+        #modalAppRegla .modal-content {
+            background-color: #f4f8ff;
+            border: 1px solid #d6e4ff !important;
+            border-radius: 14px;
+        }
+
+        #modalAppRegla .modal-header {
+            background-color: #eaf2ff;
+            border-radius: 14px 14px 0 0;
+        }
+
+        #modalAppRegla .modal-title {
+            color: #174ea6;
+        }
+
+        #modalAppRegla .modal-body {
+            color: #344054;
+        }
+
+        #modalAppRegla .modal-footer .btn-primary {
+            background-color: #3b82f6;
+            border-color: #3b82f6;
+            border-radius: 8px;
+        }
     </style>
 </head>
 
@@ -2612,6 +2638,35 @@
         </div>
 
 
+        <div class="modal fade" id="modalAppRegla" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-sm">
+                <div class="modal-content border-0 shadow">
+
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">
+                            Aplicación protegida
+                        </h5>
+
+                        <button type="button" class="btn-close" data-bs-dismiss="modal">
+                        </button>
+                    </div>
+
+                    <div class="modal-body pt-2">
+                        <p class="mb-2">
+                            Esta aplicación pertenece a una regla y no puede ser desactivada desde este dispositivo.
+                        </p>
+
+                    </div>
+
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-primary px-4" data-bs-dismiss="modal">
+                            Entendido
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
 
 
         <!-- SCRIPTS -->
@@ -3820,6 +3875,7 @@
             // Lógica del Modal
             async function abrirModalEditor(id, activo) {
                 tabletIdActual = id;
+                appsModificadas.clear();
                 document.getElementById('modal-activo-label').innerText = activo;
                 const listaApps = document.getElementById('lista-apps');
 
@@ -3833,6 +3889,10 @@
                     // 1. Pedir los datos de la tablet al servidor
                     const res = await fetch(`/devices/${id}`);
                     const tablet = await res.json();
+                    const resRegla = await fetch(`/devices/${id}/apps-regla`);
+                    const dataRegla = await resRegla.json();
+
+                    const appsRegla = new Set(dataRegla.packages || []);
                     console.log("RESTRICCIONES BD:");
                     console.log(tablet.restricciones);
                     const restricciones = JSON.parse(tablet.restricciones || "{}");
@@ -3873,33 +3933,91 @@
 
                     // 3. Dibujar cada app en la lista
                     data.apps.forEach(app => {
-                        const isChecked = appsBloqueadas.includes(app.package_name) ? 'checked' : '';
+
+                        const esDeRegla = appsRegla.has(app.package_name);
+
+                        const isChecked =
+                            esDeRegla || appsBloqueadas.includes(app.package_name)
+                                ? 'checked'
+                                : '';
 
                         listaApps.innerHTML += `
-                <div class="list-group-item d-flex justify-content-between align-items-center app-item">
+                  <div class="list-group-item d-flex justify-content-between align-items-center app-item
+                    ${esDeRegla ? 'border border-primary border-2' : ''}">
+
                     <div>
-                        <div class="fw-bold app-name">${app.app_name}</div>
-                        <small class="text-muted" style="font-size: 0.7rem;">${app.package_name}</small>
+                        <div class="fw-bold app-name">
+                            ${app.app_name}
+                            ${esDeRegla
+                                ? '<span class="badge bg-primary ms-2">REGLA</span>'
+                                : ''}
+                        </div>
+
+                        <small class="text-muted" style="font-size: 0.7rem;">
+                            ${app.package_name}
+                        </small>
                     </div>
+
                     <div class="form-check form-switch">
-                        <input class="form-check-input check-app" type="checkbox" 
-                               value="${app.package_name}" ${isChecked}>
+                        <input class="form-check-input check-app"
+                            type="checkbox"
+                            value="${app.package_name}"
+                            ${isChecked}
+                            ${esDeRegla ? 'data-regla="true"' : ''}>
                     </div>
                 </div>
             `;
                     });
+
+                    prepararCambiosApps();
+
+                    document.querySelectorAll('.check-app[data-regla="true"]')
+                        .forEach(check => {
+
+                            check.addEventListener('change', function () {
+
+                                if (!this.checked) {
+
+                                    this.checked = true;
+
+                                    mostrarAppProtegida();
+                                }
+                            });
+                        });
                     filtrarApps();
                 } catch (e) {
                     console.error(e);
                     listaApps.innerHTML = '<div class="alert alert-danger">Error al cargar la lista de apps.</div>';
                 }
             }
+
+
+            function mostrarAppProtegida() {
+
+                const modalElement =
+                    document.getElementById('modalAppRegla');
+
+                const modal =
+                    bootstrap.Modal.getOrCreateInstance(modalElement);
+
+                modal.show();
+            }
+
             async function recargarAppsModal() {
 
                 const listaApps = document.getElementById('lista-apps');
 
                 const res = await fetch(`/devices/${tabletIdActual}`);
                 const tablet = await res.json();
+
+                const resRegla =
+                    await fetch(`/devices/${tabletIdActual}/apps-regla`);
+
+                const dataRegla =
+                    await resRegla.json();
+
+                const appsRegla =
+                    new Set(dataRegla.packages || []);
 
                 const data = JSON.parse(tablet.apps_reportadas || '{"apps":[]}');
 
@@ -3916,42 +4034,132 @@
 
                 data.apps.forEach(app => {
 
+                    const esDeRegla =
+                        appsRegla.has(app.package_name);
+
                     const isChecked =
-                        appsBloqueadas.includes(app.package_name)
+                        esDeRegla ||
+                            appsBloqueadas.includes(app.package_name)
                             ? 'checked'
                             : '';
 
                     listaApps.innerHTML += `
-            <div class="list-group-item d-flex justify-content-between align-items-center app-item">
-                <div>
-                    <div class="fw-bold app-name">${app.app_name}</div>
-                    <small class="text-muted" style="font-size: 0.7rem;">
-                        ${app.package_name}
-                    </small>
-                </div>
-                <div class="form-check form-switch">
-                    <input class="form-check-input check-app"
-                           type="checkbox"
-                           value="${app.package_name}"
-                           ${isChecked}>
-                </div>
-            </div>
-        `;
+                    <div class="list-group-item d-flex justify-content-between align-items-center app-item
+                                ${esDeRegla ? 'border border-primary border-2' : ''}">
+
+                        <div>
+                            <div class="fw-bold app-name">
+                                ${app.app_name}
+
+                                ${esDeRegla
+                            ? '<span class="badge bg-primary ms-2">REGLA</span>'
+                            : ''}
+                            </div>
+
+                            <small class="text-muted" style="font-size: 0.7rem;">
+                                ${app.package_name}
+                            </small>
+                        </div>
+
+                        <div class="form-check form-switch">
+                            <input class="form-check-input check-app"
+                                type="checkbox"
+                                value="${app.package_name}"
+                                ${isChecked}
+                                ${esDeRegla ? 'data-regla="true"' : ''}>
+                        </div>
+                    </div>
+                `;
                 });
+
+                prepararCambiosApps();
+
+                document.querySelectorAll('.check-app[data-regla="true"]')
+                    .forEach(check => {
+
+                        check.addEventListener('change', function () {
+
+                            if (!this.checked) {
+
+                                this.checked = true;
+
+                                mostrarAppProtegida();
+                            }
+                        });
+                    });
 
                 filtrarApps();
             }
 
             let accionMasivaApps = null;
+            let estadoNormalApps = null;
+            let appsModificadas = new Map();
+            function prepararCambiosApps() {
+
+                console.log("PREPARANDO CAMBIOS APPS");
+
+                const switches = document.querySelectorAll('.check-app');
+
+                console.log("SWITCHES ENCONTRADOS:", switches.length);
+
+                switches.forEach(check => {
+
+                    check.addEventListener('change', function () {
+
+                        console.log("CHANGE DETECTADO:", this.value);
+
+                        if (this.dataset.regla === "true") {
+                            console.log("ES APP DE REGLA");
+                            return;
+                        }
+
+                        const accion =
+                            this.checked
+                                ? "BLOQUEAR"
+                                : "PERMITIR";
+
+                        appsModificadas.set(
+                            this.value,
+                            accion
+                        );
+
+                        console.log(
+                            "APP MODIFICADA WEB:",
+                            this.value,
+                            accion
+                        );
+                    });
+                });
+            }
 
 
             // Para bloquear o desbloquear todas las apps de un solo clic
             function seleccionarTodasApps(bloquear) {
 
+                // Guardar el estado NORMAL antes de la acción masiva
+                if (estadoNormalApps === null) {
+
+                    estadoNormalApps = new Set();
+
+                    document.querySelectorAll('.check-app').forEach(check => {
+
+                        if (check.checked) {
+                            estadoNormalApps.add(check.value);
+                        }
+                    });
+
+                    console.log(
+                        "Estado normal guardado:",
+                        Array.from(estadoNormalApps)
+                    );
+                }
+
+                // Acción temporal
                 accionMasivaApps = bloquear
                     ? "BLOQUEAR_TODAS"
                     : "PERMITIR_TODAS";
 
+                // Mostrar visualmente el estado temporal
                 document.querySelectorAll('.check-app').forEach(check => {
                     check.checked = bloquear;
                 });
@@ -4254,8 +4462,34 @@
                         urlsPermitidas
                 };
                 // 1. Recolectar paquetes seleccionados
-                const checks = document.querySelectorAll('.check-app:checked');
-                const appsBloqueadasString = Array.from(checks).map(c => c.value).join(",");
+                // 1. Recolectar paquetes seleccionados
+                let appsBloqueadasString;
+
+                if (accionMasivaApps && estadoNormalApps !== null) {
+
+                    // Acción masiva: conservar la lista normal anterior
+                    appsBloqueadasString =
+                        Array.from(estadoNormalApps).join(",");
+
+                } else {
+
+                    // Guardado normal
+                    const checks =
+                        document.querySelectorAll('.check-app:checked');
+
+                    const appsSeleccionadas = new Set(
+                        Array.from(checks).map(c => c.value)
+                    );
+
+                    // Las apps de regla siempre se conservan
+                    document.querySelectorAll('.check-app[data-regla="true"]')
+                        .forEach(check => {
+                            appsSeleccionadas.add(check.value);
+                        });
+
+                    appsBloqueadasString =
+                        Array.from(appsSeleccionadas).join(",");
+                }
 
                 // 2. Crear objeto de configuración (Por ahora solo apps)
                 const checksDias =
@@ -4290,7 +4524,14 @@
                     config_reinicio: configReinicio,
                     restricciones: JSON.stringify(restricciones),
                     urls_permitidas: JSON.stringify(configWeb),
-                    accion_masiva_apps: accionMasivaApps
+                    accion_masiva_apps: accionMasivaApps,
+
+                    apps_modificadas: Array.from(
+                        appsModificadas.entries()
+                    ).map(([packageName, accion]) => ({
+                        package_name: packageName,
+                        accion: accion
+                    }))
                 };
 
                 try {
@@ -4303,6 +4544,8 @@
 
                     if (res.ok) {
                         accionMasivaApps = null;
+                        estadoNormalApps = null;
+                        appsModificadas.clear();
                         bootstrapModal.hide();
                     } else {
                         alert('Error al guardar en el servidor.');
