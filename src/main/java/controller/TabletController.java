@@ -33,565 +33,762 @@ import org.springframework.http.MediaType;
 @RequestMapping("/devices") // Cambiamos esto para que coincida con la app
 public class TabletController {
 
-    @Autowired
-    private TabletService tabletService;
+        @Autowired
+        private TabletService tabletService;
 
-    @Autowired
-    private TabletRepository tabletRepository;
+        @Autowired
+        private TabletRepository tabletRepository;
 
-    @Autowired
-    private GpsHistoryService gpsHistoryService;
+        @Autowired
+        private GpsHistoryService gpsHistoryService;
 
-    @Autowired
-    private ReglaAppsService reglaAppsService;
+        @Autowired
+        private ReglaAppsService reglaAppsService;
 
-    // La app llama a /devices/register
-    @PostMapping("/register")
-    public ResponseEntity<?> registrar(@RequestBody Tablet tablet) {
+        // La app llama a /devices/register
+        @PostMapping("/register")
+        public ResponseEntity<?> registrar(@RequestBody Tablet tablet) {
 
-        boolean dispositivoNuevo = tabletRepository.findByActivo(tablet.getActivo()).isEmpty();
+                boolean dispositivoNuevo = tabletRepository.findByActivo(tablet.getActivo()).isEmpty();
 
-        Tablet t = tabletService.procesarHeartbeat(tablet);
+                Tablet t = tabletService.procesarHeartbeat(tablet);
 
-        if (t == null) {
-            return ResponseEntity.badRequest().body("Activo obligatorio");
-        }
-
-        Map<String, Object> respuesta = new java.util.LinkedHashMap<>();
-
-        respuesta.put("id", t.getId());
-        respuesta.put("activo", t.getActivo());
-
-        if (dispositivoNuevo) {
-
-            var packages = reglaAppsService.obtenerReglaEfectiva(t);
-
-            respuesta.put("apps_rule", packages);
-
-            System.out.println(
-                    "VINCULACION NUEVA | ACTIVO=" +
-                            t.getActivo() +
-                            " | REGLA ENVIADA=" +
-                            packages.size());
-
-        } else {
-
-            System.out.println(
-                    "REVINCULACION | ACTIVO=" +
-                            t.getActivo() +
-                            " | NO SE MODIFICA REGLA DE APPS");
-        }
-
-        return ResponseEntity.ok(respuesta);
-    }
-
-    @GetMapping("/{id}/apps-regla")
-    public ResponseEntity<?> obtenerAppsRegla(
-            @PathVariable Long id) {
-
-        Tablet tablet = tabletRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-
-        var packages = reglaAppsService.obtenerReglaEfectiva(tablet);
-
-        return ResponseEntity.ok(
-                Map.of(
-                        "activo", tablet.getActivo(),
-                        "packages", packages));
-    }
-
-    // La app llama a /devices/{id}/heartbeat
-    @PostMapping("/{id}/heartbeat")
-    public ResponseEntity<?> heartbeat(@PathVariable Long id, @RequestBody Tablet datos) {
-
-        datos.setId(id);
-
-        Tablet tablet = tabletService.procesarHeartbeat(datos);
-
-        if (tablet == null) {
-            return ResponseEntity.badRequest().body("Activo obligatorio");
-        }
-
-        return ResponseEntity.ok(tablet);
-    }
-
-    @GetMapping("/{id}/historial-cargador")
-    public List<Object[]> obtenerHistorialCargador(
-            @PathVariable Long id,
-            @RequestParam(required = false) String fechaDesde,
-            @RequestParam(required = false) String fechaHasta) {
-
-        return tabletService.obtenerHistorialCargador(
-                id,
-                fechaDesde,
-                fechaHasta);
-
-    }
-
-    @GetMapping("/all")
-    public Page<TabletDashboardProjection> obtenerTodas(
-
-            @RequestParam(defaultValue = "0") int page,
-
-            @RequestParam(defaultValue = "25") int size,
-
-            @RequestParam(defaultValue = "") String buscar,
-
-            @RequestParam(defaultValue = "") String planta,
-
-            @RequestParam(defaultValue = "") String categoria,
-            @RequestParam(defaultValue = "") String estado,
-
-            @RequestParam(defaultValue = "") String estadoCargador) {
-
-        Pageable pageable = PageRequest.of(page, size);
-
-        System.out.println("PLANTA = [" + planta + "]");
-        System.out.println("CATEGORIA = [" + categoria + "]");
-        System.out.println("BUSCAR = [" + buscar + "]");
-        System.out.println("ESTADO = [" + estadoCargador + "]");
-
-        return tabletService.obtenerDashboard(
-                buscar,
-                planta,
-                categoria,
-                estadoCargador,
-                estado,
-                pageable);
-    }
-
-    @PostMapping("/refresh")
-    public ResponseEntity<Void> actualizarDispositivos() {
-
-        MdmSocketHandler.obtenerTabletsConectadas()
-                .forEach(MdmSocketHandler::solicitarActualizacion);
-
-        return ResponseEntity.ok().build();
-    }
-
-    @GetMapping("/dashboard")
-    public DashboardDTO obtenerDashboard() {
-
-        return tabletService.obtenerDashboard();
-
-    }
-
-    @GetMapping("/reporte")
-    public ResponseEntity<byte[]> generarReporte(
-            @RequestParam(defaultValue = "") String buscar,
-            @RequestParam(defaultValue = "") String planta,
-            @RequestParam(defaultValue = "") String categoria,
-            @RequestParam(defaultValue = "") String estadoCargador,
-            @RequestParam(defaultValue = "") String estado,
-            @RequestParam(defaultValue = "") String columnas) throws IOException {
-
-        byte[] excel = tabletService.obtenerReporte(
-                buscar,
-                planta,
-                categoria,
-                estadoCargador,
-                estado,
-                columnas);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType(
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.set(HttpHeaders.CONTENT_DISPOSITION,
-                "attachment; filename=Reporte_MDM.xlsx");
-
-        return new ResponseEntity<>(excel, headers, HttpStatus.OK);
-    }
-
-    @GetMapping("/plantas")
-    public List<String> obtenerPlantas() {
-
-        return tabletService.obtenerPlantas();
-    }
-
-    @GetMapping("/categorias")
-    public List<String> obtenerCategorias() {
-
-        return tabletService.obtenerCategorias();
-    }
-
-    @GetMapping("/lista")
-    public List<Tablet> obtenerTablets() {
-
-        return tabletService.obtenerTablets();
-    }
-
-    @GetMapping("/lista-paginada")
-    public Page<Tablet> obtenerTabletsPaginadas(
-
-            @RequestParam(defaultValue = "0") int page,
-
-            @RequestParam(defaultValue = "25") int size,
-
-            @RequestParam(defaultValue = "") String buscar) {
-
-        Pageable pageable = PageRequest.of(page, size);
-
-        return tabletService.obtenerTabletsSelector(
-                buscar,
-                pageable);
-    }
-
-    @PostMapping("/{id}/location")
-    public void recibirUbicacion(
-            @PathVariable Long id,
-            @RequestBody LocationDTO location) {
-
-        tabletRepository.findById(id).ifPresent(tablet -> {
-
-            tablet.setLatitude(location.getLatitude());
-            tablet.setLongitude(location.getLongitude());
-            tablet.setGpsAccuracy(location.getAccuracy());
-            tablet.setGpsSource(location.getSource());
-
-            if (location.getTimestamp() != null) {
-                tablet.setGpsTimestamp(
-                        java.time.Instant.ofEpochMilli(location.getTimestamp())
-                                .atZone(java.time.ZoneId.systemDefault())
-                                .toLocalDateTime());
-            }
-
-            tabletRepository.save(tablet);
-
-            gpsHistoryService.guardarPunto(
-                    id,
-                    location.getLatitude(),
-                    location.getLongitude(),
-                    location.getAccuracy());
-
-            System.out.println("GPS RECIBIDO TABLET " + id);
-            System.out.println("LAT = " + location.getLatitude());
-            System.out.println("LON = " + location.getLongitude());
-            System.out.println("ACC = " + location.getAccuracy());
-            System.out.println("SRC = " + location.getSource());
-
-        });
-    }
-
-    @GetMapping("/{id}/location")
-    public LocationDTO obtenerUbicacion(
-            @PathVariable Long id) {
-
-        Tablet tablet = tabletRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-
-        LocationDTO dto = new LocationDTO();
-
-        dto.setLatitude(tablet.getLatitude());
-        dto.setLongitude(tablet.getLongitude());
-        dto.setAccuracy(tablet.getGpsAccuracy());
-        dto.setSource(tablet.getGpsSource());
-
-        if (tablet.getGpsTimestamp() != null) {
-            dto.setTimestamp(
-                    tablet.getGpsTimestamp()
-                            .atZone(java.time.ZoneId.systemDefault())
-                            .toInstant()
-                            .toEpochMilli());
-        }
-
-        return dto;
-    }
-
-    @PostMapping("/{id}/apps")
-    public void recibirApps(@PathVariable Long id, @RequestBody String body) {
-
-        System.out.println("================================");
-        System.out.println("RECIBI APPS");
-        System.out.println("ID = " + id);
-        System.out.println("TAMAÑO = " + body.length());
-        System.out.println(body.substring(0, Math.min(300, body.length())));
-        System.out.println("================================");
-
-        tabletRepository.findById(id).ifPresent(t -> {
-            t.setAppsReportadas(body);
-            tabletRepository.save(t);
-        });
-    }
-
-    @Autowired
-    private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
-
-    @Autowired
-    private WebTitleService webTitleService;
-
-    @PutMapping("/{id}/config")
-    public Tablet actualizarConfig(@PathVariable Long id, @RequestBody Tablet config) {
-
-        try {
-
-            // COMANDO TEMPORAL (NO SE GUARDA EN BD)
-            if ("sync_apps".equals(config.getPendingCommand())) {
-
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"sync_apps\"}");
-
-                System.out.println("SYNC_APPS ENVIADO POR WEBSOCKET A TABLET " + id);
-
-                return tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-            }
-
-            if ("reboot".equals(config.getPendingCommand())) {
-
-                boolean ack = MdmSocketHandler.enviarOrdenConAck(
-                        id.toString(),
-                        "{\"pending_command\":\"reboot\"}",
-                        "reboot");
-
-                if (ack) {
-                    System.out.println("REBOOT CONFIRMADO POR TABLET " + id);
-                } else {
-                    System.out.println("REBOOT NO CONFIRMADO POR TABLET " + id);
+                if (t == null) {
+                        return ResponseEntity.badRequest().body("Activo obligatorio");
                 }
 
-                Tablet tablet = tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                Map<String, Object> respuesta = new java.util.LinkedHashMap<>();
 
-                tablet.setPendingCommand(ack ? "ACK_REBOOT_OK" : "ACK_REBOOT_FAIL");
+                respuesta.put("id", t.getId());
+                respuesta.put("activo", t.getActivo());
 
-                return tablet;
-            }
+                if (dispositivoNuevo) {
 
-            if ("lock_device".equals(config.getPendingCommand())) {
+                        var packages = reglaAppsService.obtenerReglaEfectiva(t);
 
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"lock_device\"}");
+                        respuesta.put("apps_rule", packages);
 
-                return tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-            }
+                        System.out.println(
+                                        "VINCULACION NUEVA | ACTIVO=" +
+                                                        t.getActivo() +
+                                                        " | REGLA ENVIADA=" +
+                                                        packages.size());
 
-            if ("unlock_device".equals(config.getPendingCommand())) {
-
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"unlock_device\"}");
-
-                return tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-            }
-
-            if ("alarm_on".equals(config.getPendingCommand())) {
-
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"alarm_on\"}");
-
-                return tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-            }
-
-            if ("alarm_off".equals(config.getPendingCommand())) {
-
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"alarm_off\"}");
-
-                return tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-            }
-
-            if ("location_request".equals(config.getPendingCommand())) {
-
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"location_request\"}");
-
-                return tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-            }
-
-            if ("location_track_start".equals(config.getPendingCommand())) {
-
-                Tablet tabletActualizada = tabletService.actualizarConfiguracionRemota(id, config);
-
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"location_track_start\"}");
-
-                return tabletActualizada;
-            }
-
-            if ("location_track_stop".equals(config.getPendingCommand())) {
-
-                Tablet tabletActualizada = tabletService.actualizarConfiguracionRemota(id, config);
-
-                MdmSocketHandler.enviarOrden(
-                        id.toString(),
-                        "{\"pending_command\":\"location_track_stop\"}");
-
-                return tabletActualizada;
-            }
-
-            if ("factory_reset".equals(config.getPendingCommand())) {
-
-                boolean ack = MdmSocketHandler.enviarOrdenConAck(
-                        id.toString(),
-                        "{\"command\":\"factory_reset\"}",
-                        "factory_reset");
-
-                if (ack) {
-                    System.out.println("FACTORY RESET CONFIRMADO POR TABLET " + id);
                 } else {
-                    System.out.println("FACTORY RESET NO CONFIRMADO POR TABLET " + id);
+
+                        System.out.println(
+                                        "REVINCULACION | ACTIVO=" +
+                                                        t.getActivo() +
+                                                        " | NO SE MODIFICA REGLA DE APPS");
                 }
 
-                Tablet tablet = tabletRepository.findById(id)
-                        .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-
-                tablet.setPendingCommand(
-                        ack ? "ACK_FACTORY_RESET_OK"
-                                : "ACK_FACTORY_RESET_FAIL");
-
-                return tablet;
-            }
-
-            System.out.println("============== CONTROLLER ==============");
-            System.out.println("APPS = " + config.getAppsBloqueadas());
-            System.out.println("REINICIO = " + config.getConfigReinicio());
-            System.out.println("RESTRICCIONES = " + config.getRestricciones());
-            System.out.println("URLS = " + config.getUrlsPermitidas());
-            System.out.println("========================================");
-
-            // =============================================
-            // CONFIGURACIÓN NORMAL / ACCIONES MASIVAS APPS
-            // =============================================
-
-            String accionMasivaApps = config.getAccionMasivaApps();
-            String appsBloqueadasOriginal = config.getAppsBloqueadas();
-            var appsModificadas = config.getAppsModificadas();
-
-            boolean esAccionMasiva = "PERMITIR_TODAS".equals(accionMasivaApps) ||
-                    "BLOQUEAR_TODAS".equals(accionMasivaApps);
-
-            // Si es PERMITIR TODAS o BLOQUEAR TODAS,
-            // NO guardamos ese estado temporal como política permanente.
-            if (esAccionMasiva) {
-                config.setAppsBloqueadas(null);
-            }
-
-            // Guardar las demás configuraciones normalmente
-            Tablet tabletActualizada = tabletService.actualizarConfiguracionRemota(id, config);
-
-            tabletActualizada.setPendingCommand(null);
-
-            // Para el WebSocket sí mandamos la acción masiva
-            if (esAccionMasiva) {
-
-                tabletActualizada.setAppsBloqueadas(
-                        appsBloqueadasOriginal);
-
-                tabletActualizada.setAccionMasivaApps(
-                        accionMasivaApps);
-
-                // Una acción masiva NO es un cambio individual
-                tabletActualizada.setAppsModificadas(null);
-
-            } else {
-
-                tabletActualizada.setAccionMasivaApps(null);
-
-                // Cambios individuales realizados desde la WEB
-                tabletActualizada.setAppsModificadas(
-                        appsModificadas);
-            }
-
-            System.out.println(
-                    "APPS MODIFICADAS WEB = " +
-                            appsModificadas);
-
-            String jsonResponse = objectMapper.writeValueAsString(tabletActualizada);
-
-            MdmSocketHandler.enviarOrden(
-                    id.toString(),
-                    jsonResponse);
-
-            System.out.println(
-                    "WEBSOCKET ENVIADO A TABLET " + id +
-                            " | ACCION MASIVA = " + accionMasivaApps);
-
-            return tabletActualizada;
-
-        } catch (GpsTrackingAlreadyActiveException e) {
-
-            throw e;
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-            throw new RuntimeException(e);
+                return ResponseEntity.ok(respuesta);
         }
-    }
 
-    @GetMapping("/web-title")
-    public WebUrlDTO obtenerTitulo(@RequestParam String url) {
+        @GetMapping("/{id}/apps-regla")
+        public ResponseEntity<?> obtenerAppsRegla(
+                        @PathVariable Long id) {
 
-        WebUrlDTO dto = new WebUrlDTO();
+                Tablet tablet = tabletRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
 
-        dto.setUrl(url);
-        dto.setNombre(webTitleService.obtenerTitulo(url));
+                var packages = reglaAppsService.obtenerReglaEfectiva(tablet);
 
-        return dto;
-    }
+                return ResponseEntity.ok(
+                                Map.of(
+                                                "activo", tablet.getActivo(),
+                                                "packages", packages));
+        }
 
-    // Añade esto a tu TabletController.java
-    @GetMapping("/{id}/config")
-    public PolicyDTO obtenerConfiguracionLigera(@PathVariable Long id) {
+        // La app llama a /devices/{id}/heartbeat
+        @PostMapping("/{id}/heartbeat")
+        public ResponseEntity<?> heartbeat(@PathVariable Long id, @RequestBody Tablet datos) {
 
-        Tablet t = tabletRepository.findById(id)
-                .orElseThrow();
+                datos.setId(id);
 
-        PolicyDTO dto = new PolicyDTO();
+                Tablet tablet = tabletService.procesarHeartbeat(datos);
 
-        dto.setAppsBloqueadas(t.getAppsBloqueadas());
-        dto.setRestricciones(t.getRestricciones());
-        dto.setConfigReinicio(t.getConfigReinicio());
-        dto.setUrlsPermitidas(t.getUrlsPermitidas());
+                if (tablet == null) {
+                        return ResponseEntity.badRequest().body("Activo obligatorio");
+                }
 
-        return dto;
-    }
+                return ResponseEntity.ok(tablet);
+        }
 
-    @GetMapping("/{id}")
-    public Tablet obtenerPorId(@PathVariable Long id) {
+        @GetMapping("/{id}/historial-cargador")
+        public List<Object[]> obtenerHistorialCargador(
+                        @PathVariable Long id,
+                        @RequestParam(required = false) String fechaDesde,
+                        @RequestParam(required = false) String fechaHasta) {
 
-        Tablet t = tabletRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                return tabletService.obtenerHistorialCargador(
+                                id,
+                                fechaDesde,
+                                fechaHasta);
 
-        return t;
-    }
+        }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarTablet(@PathVariable Long id) {
+        @GetMapping("/all")
+        public Page<TabletDashboardProjection> obtenerTodas(
 
-        System.out.println("ELIMINANDO TABLET: " + id);
-        tabletService.eliminarTablet(id);
+                        @RequestParam(defaultValue = "0") int page,
 
-        return ResponseEntity.noContent().build();
-    }
+                        @RequestParam(defaultValue = "25") int size,
 
-    @GetMapping("/activo/{activo}")
-    public Tablet obtenerPorActivo(@PathVariable String activo) {
+                        @RequestParam(defaultValue = "") String buscar,
 
-        return tabletRepository.findByActivo(activo)
-                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
-    }
+                        @RequestParam(defaultValue = "") String planta,
 
-    @ExceptionHandler(GpsTrackingAlreadyActiveException.class)
-    public ResponseEntity<?> gpsTrackingActivo(
-            GpsTrackingAlreadyActiveException e) {
+                        @RequestParam(defaultValue = "") String categoria,
+                        @RequestParam(defaultValue = "") String estado,
 
-        return ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(Map.of(
-                        "error", "GPS_TRACKING_ALREADY_ACTIVE",
-                        "message", e.getMessage()));
-    }
+                        @RequestParam(defaultValue = "") String estadoCargador) {
+
+                Pageable pageable = PageRequest.of(page, size);
+
+                System.out.println("PLANTA = [" + planta + "]");
+                System.out.println("CATEGORIA = [" + categoria + "]");
+                System.out.println("BUSCAR = [" + buscar + "]");
+                System.out.println("ESTADO = [" + estadoCargador + "]");
+
+                return tabletService.obtenerDashboard(
+                                buscar,
+                                planta,
+                                categoria,
+                                estadoCargador,
+                                estado,
+                                pageable);
+        }
+
+        @PostMapping("/refresh")
+        public ResponseEntity<Void> actualizarDispositivos() {
+
+                MdmSocketHandler.obtenerTabletsConectadas()
+                                .forEach(MdmSocketHandler::solicitarActualizacion);
+
+                return ResponseEntity.ok().build();
+        }
+
+        @GetMapping("/dashboard")
+        public DashboardDTO obtenerDashboard() {
+
+                return tabletService.obtenerDashboard();
+
+        }
+
+        @GetMapping("/reporte")
+        public ResponseEntity<byte[]> generarReporte(
+                        @RequestParam(defaultValue = "") String buscar,
+                        @RequestParam(defaultValue = "") String planta,
+                        @RequestParam(defaultValue = "") String categoria,
+                        @RequestParam(defaultValue = "") String estadoCargador,
+                        @RequestParam(defaultValue = "") String estado,
+                        @RequestParam(defaultValue = "") String columnas) throws IOException {
+
+                byte[] excel = tabletService.obtenerReporte(
+                                buscar,
+                                planta,
+                                categoria,
+                                estadoCargador,
+                                estado,
+                                columnas);
+
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.parseMediaType(
+                                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+                headers.set(HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=Reporte_MDM.xlsx");
+
+                return new ResponseEntity<>(excel, headers, HttpStatus.OK);
+        }
+
+        @GetMapping("/plantas")
+        public List<String> obtenerPlantas() {
+
+                return tabletService.obtenerPlantas();
+        }
+
+        @GetMapping("/categorias")
+        public List<String> obtenerCategorias() {
+
+                return tabletService.obtenerCategorias();
+        }
+
+        @GetMapping("/lista")
+        public List<Tablet> obtenerTablets() {
+
+                return tabletService.obtenerTablets();
+        }
+
+        @GetMapping("/lista-paginada")
+        public Page<Tablet> obtenerTabletsPaginadas(
+
+                        @RequestParam(defaultValue = "0") int page,
+
+                        @RequestParam(defaultValue = "25") int size,
+
+                        @RequestParam(defaultValue = "") String buscar) {
+
+                Pageable pageable = PageRequest.of(page, size);
+
+                return tabletService.obtenerTabletsSelector(
+                                buscar,
+                                pageable);
+        }
+
+        @PostMapping("/{id}/location")
+        public void recibirUbicacion(
+                        @PathVariable Long id,
+                        @RequestBody LocationDTO location) {
+
+                tabletRepository.findById(id).ifPresent(tablet -> {
+
+                        tablet.setLatitude(location.getLatitude());
+                        tablet.setLongitude(location.getLongitude());
+                        tablet.setGpsAccuracy(location.getAccuracy());
+                        tablet.setGpsSource(location.getSource());
+
+                        if (location.getTimestamp() != null) {
+                                tablet.setGpsTimestamp(
+                                                java.time.Instant.ofEpochMilli(location.getTimestamp())
+                                                                .atZone(java.time.ZoneId.systemDefault())
+                                                                .toLocalDateTime());
+                        }
+
+                        tabletRepository.save(tablet);
+
+                        gpsHistoryService.guardarPunto(
+                                        id,
+                                        location.getLatitude(),
+                                        location.getLongitude(),
+                                        location.getAccuracy());
+
+                        System.out.println("GPS RECIBIDO TABLET " + id);
+                        System.out.println("LAT = " + location.getLatitude());
+                        System.out.println("LON = " + location.getLongitude());
+                        System.out.println("ACC = " + location.getAccuracy());
+                        System.out.println("SRC = " + location.getSource());
+
+                });
+        }
+
+        @GetMapping("/{id}/location")
+        public LocationDTO obtenerUbicacion(
+                        @PathVariable Long id) {
+
+                Tablet tablet = tabletRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+
+                LocationDTO dto = new LocationDTO();
+
+                dto.setLatitude(tablet.getLatitude());
+                dto.setLongitude(tablet.getLongitude());
+                dto.setAccuracy(tablet.getGpsAccuracy());
+                dto.setSource(tablet.getGpsSource());
+
+                if (tablet.getGpsTimestamp() != null) {
+                        dto.setTimestamp(
+                                        tablet.getGpsTimestamp()
+                                                        .atZone(java.time.ZoneId.systemDefault())
+                                                        .toInstant()
+                                                        .toEpochMilli());
+                }
+
+                return dto;
+        }
+
+        @PostMapping("/{id}/apps")
+        public void recibirApps(@PathVariable Long id, @RequestBody String body) {
+
+                System.out.println("================================");
+                System.out.println("RECIBI APPS");
+                System.out.println("ID = " + id);
+                System.out.println("TAMAÑO = " + body.length());
+                System.out.println(body.substring(0, Math.min(300, body.length())));
+                System.out.println("================================");
+
+                tabletRepository.findById(id).ifPresent(t -> {
+                        t.setAppsReportadas(body);
+                        tabletRepository.save(t);
+                });
+        }
+
+        @Autowired
+        private com.fasterxml.jackson.databind.ObjectMapper objectMapper;
+
+        @Autowired
+        private WebTitleService webTitleService;
+
+        @PutMapping("/{id}/config")
+        public Tablet actualizarConfig(@PathVariable Long id, @RequestBody Tablet config) {
+
+                try {
+
+                        // COMANDO TEMPORAL (NO SE GUARDA EN BD)
+                        if ("sync_apps".equals(config.getPendingCommand())) {
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"sync_apps\"}");
+
+                                System.out.println("SYNC_APPS ENVIADO POR WEBSOCKET A TABLET " + id);
+
+                                return tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                        }
+
+                        if ("reboot".equals(config.getPendingCommand())) {
+
+                                boolean ack = MdmSocketHandler.enviarOrdenConAck(
+                                                id.toString(),
+                                                "{\"pending_command\":\"reboot\"}",
+                                                "reboot");
+
+                                if (ack) {
+                                        System.out.println("REBOOT CONFIRMADO POR TABLET " + id);
+                                } else {
+                                        System.out.println("REBOOT NO CONFIRMADO POR TABLET " + id);
+                                }
+
+                                Tablet tablet = tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+
+                                tablet.setPendingCommand(ack ? "ACK_REBOOT_OK" : "ACK_REBOOT_FAIL");
+
+                                return tablet;
+                        }
+
+                        if ("lock_device".equals(config.getPendingCommand())) {
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"lock_device\"}");
+
+                                return tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                        }
+
+                        if ("unlock_device".equals(config.getPendingCommand())) {
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"unlock_device\"}");
+
+                                return tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                        }
+
+                        if ("alarm_on".equals(config.getPendingCommand())) {
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"alarm_on\"}");
+
+                                return tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                        }
+
+                        if ("alarm_off".equals(config.getPendingCommand())) {
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"alarm_off\"}");
+
+                                return tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                        }
+
+                        if ("location_request".equals(config.getPendingCommand())) {
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"location_request\"}");
+
+                                return tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+                        }
+
+                        if ("location_track_start".equals(config.getPendingCommand())) {
+
+                                Tablet tabletActualizada = tabletService.actualizarConfiguracionRemota(id, config);
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"location_track_start\"}");
+
+                                return tabletActualizada;
+                        }
+
+                        if ("location_track_stop".equals(config.getPendingCommand())) {
+
+                                Tablet tabletActualizada = tabletService.actualizarConfiguracionRemota(id, config);
+
+                                MdmSocketHandler.enviarOrden(
+                                                id.toString(),
+                                                "{\"pending_command\":\"location_track_stop\"}");
+
+                                return tabletActualizada;
+                        }
+
+                        if ("factory_reset".equals(config.getPendingCommand())) {
+
+                                boolean ack = MdmSocketHandler.enviarOrdenConAck(
+                                                id.toString(),
+                                                "{\"command\":\"factory_reset\"}",
+                                                "factory_reset");
+
+                                if (ack) {
+                                        System.out.println("FACTORY RESET CONFIRMADO POR TABLET " + id);
+                                } else {
+                                        System.out.println("FACTORY RESET NO CONFIRMADO POR TABLET " + id);
+                                }
+
+                                Tablet tablet = tabletRepository.findById(id)
+                                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+
+                                tablet.setPendingCommand(
+                                                ack ? "ACK_FACTORY_RESET_OK"
+                                                                : "ACK_FACTORY_RESET_FAIL");
+
+                                return tablet;
+                        }
+
+                        System.out.println("============== CONTROLLER ==============");
+                        System.out.println("APPS = " + config.getAppsBloqueadas());
+                        System.out.println("REINICIO = " + config.getConfigReinicio());
+                        System.out.println("RESTRICCIONES = " + config.getRestricciones());
+                        System.out.println("URLS = " + config.getUrlsPermitidas());
+                        System.out.println("========================================");
+
+                        // =============================================
+                        // CONFIGURACIÓN NORMAL / ACCIONES MASIVAS APPS
+                        // =============================================
+
+                        String accionMasivaApps = config.getAccionMasivaApps();
+                        String appsBloqueadasOriginal = config.getAppsBloqueadas();
+                        var appsModificadas = config.getAppsModificadas();
+
+                        boolean esAccionMasiva = "PERMITIR_TODAS".equals(accionMasivaApps) ||
+                                        "BLOQUEAR_TODAS".equals(accionMasivaApps);
+
+                        // Si es PERMITIR TODAS o BLOQUEAR TODAS,
+                        // NO guardamos ese estado temporal como política permanente.
+                        if (esAccionMasiva) {
+                                config.setAppsBloqueadas(null);
+                        }
+
+                        // Guardar las demás configuraciones normalmente
+                        Tablet tabletActualizada = tabletService.actualizarConfiguracionRemota(id, config);
+
+                        tabletActualizada.setPendingCommand(null);
+
+                        // Para el WebSocket sí mandamos la acción masiva
+                        if (esAccionMasiva) {
+
+                                tabletActualizada.setAppsBloqueadas(
+                                                appsBloqueadasOriginal);
+
+                                tabletActualizada.setAccionMasivaApps(
+                                                accionMasivaApps);
+
+                                // Una acción masiva NO es un cambio individual
+                                tabletActualizada.setAppsModificadas(null);
+
+                        } else {
+
+                                tabletActualizada.setAccionMasivaApps(null);
+
+                                // Cambios individuales realizados desde la WEB
+                                tabletActualizada.setAppsModificadas(
+                                                appsModificadas);
+                        }
+
+                        System.out.println(
+                                        "APPS MODIFICADAS WEB = " +
+                                                        appsModificadas);
+
+                        String jsonResponse = objectMapper.writeValueAsString(tabletActualizada);
+
+                        MdmSocketHandler.enviarOrden(
+                                        id.toString(),
+                                        jsonResponse);
+
+                        System.out.println(
+                                        "WEBSOCKET ENVIADO A TABLET " + id +
+                                                        " | ACCION MASIVA = " + accionMasivaApps);
+
+                        return tabletActualizada;
+
+                } catch (GpsTrackingAlreadyActiveException e) {
+
+                        throw e;
+
+                } catch (Exception e) {
+
+                        e.printStackTrace();
+                        throw new RuntimeException(e);
+                }
+        }
+
+        @GetMapping("/web-title")
+        public WebUrlDTO obtenerTitulo(@RequestParam String url) {
+
+                WebUrlDTO dto = new WebUrlDTO();
+
+                dto.setUrl(url);
+                dto.setNombre(webTitleService.obtenerTitulo(url));
+
+                return dto;
+        }
+
+        // Añade esto a tu TabletController.java
+        @GetMapping("/{id}/config")
+        public PolicyDTO obtenerConfiguracionLigera(@PathVariable Long id) {
+
+                Tablet t = tabletRepository.findById(id)
+                                .orElseThrow();
+
+                PolicyDTO dto = new PolicyDTO();
+
+                dto.setAppsBloqueadas(t.getAppsBloqueadas());
+                dto.setRestricciones(t.getRestricciones());
+                dto.setConfigReinicio(t.getConfigReinicio());
+                dto.setUrlsPermitidas(t.getUrlsPermitidas());
+
+                return dto;
+        }
+
+        @GetMapping("/{id}")
+        public Tablet obtenerPorId(@PathVariable Long id) {
+
+                Tablet t = tabletRepository.findById(id)
+                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+
+                return t;
+        }
+
+        @DeleteMapping("/{id}")
+        public ResponseEntity<Void> eliminarTablet(@PathVariable Long id) {
+
+                System.out.println("ELIMINANDO TABLET: " + id);
+                tabletService.eliminarTablet(id);
+
+                return ResponseEntity.noContent().build();
+        }
+
+        @GetMapping("/activo/{activo}")
+        public Tablet obtenerPorActivo(@PathVariable String activo) {
+
+                return tabletRepository.findByActivo(activo)
+                                .orElseThrow(() -> new RuntimeException("Tablet no encontrada"));
+        }
+
+        @PutMapping("/{id}/activo")
+        public ResponseEntity<?> actualizarActivo(
+                        @PathVariable Long id,
+                        @RequestBody Map<String, String> body) {
+
+                String nuevoActivo = body.get("activo");
+
+                if (nuevoActivo == null || nuevoActivo.trim().isEmpty()) {
+                        return ResponseEntity.badRequest().body(
+                                        Map.of(
+                                                        "error", "ACTIVO_VACIO",
+                                                        "message", "El código de activo es obligatorio"));
+                }
+
+                nuevoActivo = nuevoActivo.trim();
+
+                Tablet tablet = tabletRepository.findById(id)
+                                .orElse(null);
+
+                if (tablet == null) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                                        Map.of(
+                                                        "error", "TABLET_NO_ENCONTRADA",
+                                                        "message", "La tablet no existe"));
+                }
+
+                String activoAnterior = tablet.getActivo();
+
+                // Si realmente no cambió, no hacemos nada.
+                if (nuevoActivo.equals(activoAnterior)) {
+                        return ResponseEntity.ok(
+                                        Map.of(
+                                                        "message", "El activo no cambió",
+                                                        "id", tablet.getId(),
+                                                        "activo", tablet.getActivo()));
+                }
+
+                // Verificar que el nuevo activo no pertenezca a otra tablet.
+                var existente = tabletRepository.findByActivo(nuevoActivo);
+
+                if (existente.isPresent() &&
+                                !existente.get().getId().equals(id)) {
+
+                        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                                        Map.of(
+                                                        "error", "ACTIVO_DUPLICADO",
+                                                        "message", "El activo " + nuevoActivo +
+                                                                        " ya está asignado a otro dispositivo"));
+                }
+
+                boolean confirmado = false;
+
+                try {
+
+                        String comando = objectMapper.writeValueAsString(
+                                        Map.of(
+                                                        "pending_command", "change_asset",
+                                                        "activo", nuevoActivo));
+
+                        confirmado = MdmSocketHandler.enviarOrdenConAck(
+                                        id.toString(),
+                                        comando,
+                                        "change_asset");
+
+                } catch (Exception e) {
+
+                        e.printStackTrace();
+                }
+
+                if (!confirmado) {
+
+                        System.out.println(
+                                        "CAMBIO DE ACTIVO SIN CONFIRMACION | ID=" + id);
+
+                        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                                        Map.of(
+                                                        "success", false,
+                                                        "confirmed", false,
+                                                        "message",
+                                                        "No se recibió confirmación de la tablet. El dispositivo puede estar desconectado."));
+                }
+
+                // La tablet confirmó el cambio.
+                // Ahora sí actualizamos la base de datos.
+                tablet.setActivo(nuevoActivo);
+                tabletRepository.save(tablet);
+
+                System.out.println(
+                                "ACTIVO MODIFICADO Y CONFIRMADO | ID=" + id +
+                                                " | ANTERIOR=" + activoAnterior +
+                                                " | NUEVO=" + nuevoActivo);
+
+                return ResponseEntity.ok(
+                                Map.of(
+                                                "success", true,
+                                                "confirmed", true,
+                                                "message",
+                                                "Activo actualizado y confirmado por la tablet",
+                                                "id", tablet.getId(),
+                                                "activo", tablet.getActivo()));
+        }
+
+        @PutMapping("/{id}/nombre")
+        public ResponseEntity<?> actualizarNombre(
+                        @PathVariable Long id,
+                        @RequestBody Map<String, String> body) {
+
+                String nuevoNombre = body.get("device_name");
+
+                if (nuevoNombre == null || nuevoNombre.trim().isEmpty()) {
+                        return ResponseEntity.badRequest().body(
+                                        Map.of(
+                                                        "error", "NOMBRE_VACIO",
+                                                        "message", "El nombre del dispositivo es obligatorio"));
+                }
+
+                nuevoNombre = nuevoNombre.trim();
+
+                Tablet tablet = tabletRepository.findById(id)
+                                .orElse(null);
+
+                if (tablet == null) {
+                        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
+                                        Map.of(
+                                                        "error", "TABLET_NO_ENCONTRADA",
+                                                        "message", "La tablet no existe"));
+                }
+
+                String nombreAnterior = tablet.getDeviceName();
+
+                if (nuevoNombre.equals(nombreAnterior)) {
+                        return ResponseEntity.ok(
+                                        Map.of(
+                                                        "success", true,
+                                                        "confirmed", true,
+                                                        "message", "El nombre no cambió",
+                                                        "id", tablet.getId(),
+                                                        "device_name", tablet.getDeviceName()));
+                }
+
+                boolean confirmado = false;
+
+                try {
+
+                        String comando = objectMapper.writeValueAsString(
+                                        Map.of(
+                                                        "pending_command", "change_device_name",
+                                                        "device_name", nuevoNombre));
+
+                        confirmado = MdmSocketHandler.enviarOrdenConAck(
+                                        id.toString(),
+                                        comando,
+                                        "change_device_name");
+
+                } catch (Exception e) {
+
+                        System.err.println(
+                                        "ERROR ENVIANDO CAMBIO DE NOMBRE A TABLET " + id);
+
+                        e.printStackTrace();
+                }
+
+                if (!confirmado) {
+
+                        System.out.println(
+                                        "CAMBIO DE NOMBRE SIN CONFIRMACION | ID=" + id);
+
+                        return ResponseEntity.status(HttpStatus.CONFLICT).body(
+                                        Map.of(
+                                                        "success", false,
+                                                        "confirmed", false,
+                                                        "message",
+                                                        "No se recibió confirmación de la tablet. El dispositivo puede estar desconectado."));
+                }
+
+                // La tablet confirmó el cambio.
+                // Ahora sí actualizamos la base de datos.
+                tablet.setDeviceName(nuevoNombre);
+                tabletRepository.save(tablet);
+
+                System.out.println(
+                                "NOMBRE MODIFICADO Y CONFIRMADO | ID=" + id +
+                                                " | ANTERIOR=" + nombreAnterior +
+                                                " | NUEVO=" + nuevoNombre);
+
+                return ResponseEntity.ok(
+                                Map.of(
+                                                "success", true,
+                                                "confirmed", true,
+                                                "message",
+                                                "Nombre actualizado y confirmado por la tablet",
+                                                "id", tablet.getId(),
+                                                "device_name", tablet.getDeviceName()));
+        }
+
+        
+
+        @ExceptionHandler(GpsTrackingAlreadyActiveException.class)
+        public ResponseEntity<?> gpsTrackingActivo(
+                        GpsTrackingAlreadyActiveException e) {
+
+                return ResponseEntity
+                                .status(HttpStatus.CONFLICT)
+                                .body(Map.of(
+                                                "error", "GPS_TRACKING_ALREADY_ACTIVE",
+                                                "message", e.getMessage()));
+        }
 
 }

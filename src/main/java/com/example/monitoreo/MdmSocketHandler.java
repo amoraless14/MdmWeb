@@ -108,11 +108,28 @@ public class MdmSocketHandler extends TextWebSocketHandler {
                     return;
                 }
 
+            
                 // RESTO DE COMANDOS
                 CompletableFuture<Boolean> future = ackPendientes.remove(key);
 
                 if (future != null) {
-                    future.complete(true);
+
+                    if ("success".equalsIgnoreCase(status)) {
+
+                        future.complete(true);
+
+                    } else {
+
+                        System.out.println(
+                                "COMANDO NO CONFIRMADO CORRECTAMENTE | TABLET="
+                                        + deviceId
+                                        + " | COMANDO="
+                                        + command
+                                        + " | STATUS="
+                                        + status);
+
+                        future.complete(false);
+                    }
                 }
             }
 

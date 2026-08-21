@@ -3576,98 +3576,402 @@
                         }
 
                         html += `
-    <tr class="${filaClase}">
-        <td><span class="badge bg-primary px-3 py-2"
-      style="font-size:0.9rem;font-weight:700;">
-    ${t.activo || 'N/A'}
-</span></td>
-        <td>
-            <div class="fw-bold">${esOffline ? '<i class="bi bi-exclamation-triangle-fill"></i> ' : ''}${t.device_name || 'GALAXY'}</div>
-            <small class="text-muted">${t.model || ''}</small><br>
-            <small class="text-info" style="font-size: 0.7rem; font-family: monospace;">ID: ${t.android_id || '---'}</small> 
-        </td>
-       <td>
-    <div class="fw-bold">${t.empleado_asig || '---'}</div>
-    <div class="fw-semibold text-secondary"
-     style="font-size:0.90rem;">
-    ${t.codigo_emp || '---'}
-</div><br>
-    <span class="badge bg-light text-dark border mt-1" style="font-size: 0.55rem">
-        <i class="bi bi-android2"></i> Android ${t.os_version || '---'}
-    </span>
-</td>
-<td>
-    <div class="fw-bold">${t.area || '---'}</div>
-    <small class="text-muted">${t.departamento || '---'}</small>
-</td>
-        <td>
-            <div class="d-flex align-items-center gap-2 mb-1">
-                <span class="fw-bold">${t.battery_level}%</span>
-                <span class="badge ${t.battery_level < 20 ? 'bg-danger' : 'bg-warning'} text-dark" style="font-size: 0.65rem">${t.temperatura}</span>
-            </div>
-            <div class="progress" style="height: 6px; width: 80px;">
-                <div class="progress-bar ${batColor}" style="width: ${t.battery_level}%"></div>
-            </div>
-        </td>
-        <td>
-            <div class="small-info"><i class="bi bi-cpu"></i> RAM: ${t.ram_usage || 'N/A'}</div>
-            <div class="small-info"><i class="bi bi-hdd"></i> DISCO: ${t.storage_usage || 'N/A'}</div>
-            <div class="small-info text-primary"><i class="bi bi-clock"></i> ON: ${t.uptime || '---'}</div>
-        </td>
-        <td class="small">
-             <div
-        class="${t.estado_cargador?.includes('Conectado') ? 'text-success' : 'text-danger'} fw-bold"
-        ondblclick="abrirHistorialCargador(${t.id})"
-        style="cursor:pointer;"
-        title="Doble clic para ver historial">
+                        <tr class="${filaClase}">
+                        <td>
+                            <div class="d-flex align-items-center gap-1">
 
-        <i class="bi bi-plug"></i> ${t.estado_cargador}
+                                <span class="badge bg-primary px-3 py-2"
+                                    style="font-size:0.9rem;font-weight:700;">
+                                    ${t.activo || 'N/A'}
+                                </span>
 
-    </div>
-            <div class="${t.estado_wifi?.includes('Conectado') ? 'text-primary' : 'text-danger'} fw-bold">
-                <i class="bi bi-wifi"></i> ${t.estado_wifi}
-            </div>
-            <div class="text-muted mt-1" style="font-size: 0.75rem">
-                <i class="bi bi-broadcast"></i> IP: <strong>${t.ip_address || '0.0.0.0'}</strong>
-            </div>
-        </td>
-        <td>
-            <div class="mb-1">${statusLabel}</div>
-            <span class="status-badge ${(t.estado || '').toUpperCase() === 'AUTORIZADO' ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'}">
-                ${t.estado || 'NO AUTORIZADO'}
-            </span>
-        </td>
-       <td class="small fw-bold">
-    ${fechaStr}
-    <br>
-    <small class="text-muted">
-        ${esOffline ? tiempoTranscurrido(t.last_connection) : 'Actualizado'}
-    </small>
-</td>
-        <td class="text-end">
-            <div class="d-flex flex-column gap-1">
-                <!-- BOTÓN GESTIONAR -->
-                <button class="btn btn-sm btn-primary fw-bold" onclick="abrirModalEditor('${t.id}', '${t.activo}')">
-                    <i class="bi bi-shield-lock"></i> GESTIONAR
-                </button>
-                <div class="btn-group w-100">
-    <!-- Reiniciar oculto temporalmente -->
+                                <button
+                                    class="btn btn-sm btn-link text-secondary p-1 btn-editar-identidad"
+                                    title="Editar activo"
+                                    onclick="editarActivo(${t.id}, '${t.activo || ''}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
 
-    <button class="btn btn-xs btn-outline-dark w-100"
-            title="Eliminar"
-            onclick="eliminarTablet(${t.id})">
-        <i class="bi bi-trash"></i>
-    </button>
-</div>
-            </div>
-        </td>
-    </tr>
-`;
+                            </div>
+                        </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-1">
+
+                            <div class="fw-bold">
+                                    ${esOffline ? '<i class="bi bi-exclamation-triangle-fill"></i> ' : ''}
+                                    ${t.device_name || 'GALAXY'}
+                                </div>
+
+                                <button
+                                    class="btn btn-sm btn-link text-secondary p-1 btn-editar-identidad"
+                                    title="Editar nombre"
+                                    onclick="editarNombreDispositivo(${t.id}, '${(t.device_name || '').replace(/'/g, "\\'")}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+
+                            </div>
+
+                            <small class="text-muted">${t.model || ''}</small><br>
+                                <small class="text-info" style="font-size: 0.7rem; font-family: monospace;">ID: ${t.android_id || '---'}</small> 
+                            </td>
+                        <td>
+                        <div class="fw-bold">${t.empleado_asig || '---'}</div>
+                        <div class="fw-semibold text-secondary"
+                        style="font-size:0.90rem;">
+                        ${t.codigo_emp || '---'}
+                    </div><br>
+                        <span class="badge bg-light text-dark border mt-1" style="font-size: 0.55rem">
+                            <i class="bi bi-android2"></i> Android ${t.os_version || '---'}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="fw-bold">${t.area || '---'}</div>
+                        <small class="text-muted">${t.departamento || '---'}</small>
+                    </td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="fw-bold">${t.battery_level}%</span>
+                                    <span class="badge ${t.battery_level < 20 ? 'bg-danger' : 'bg-warning'} text-dark" style="font-size: 0.65rem">${t.temperatura}</span>
+                                </div>
+                                <div class="progress" style="height: 6px; width: 80px;">
+                                    <div class="progress-bar ${batColor}" style="width: ${t.battery_level}%"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small-info"><i class="bi bi-cpu"></i> RAM: ${t.ram_usage || 'N/A'}</div>
+                                <div class="small-info"><i class="bi bi-hdd"></i> DISCO: ${t.storage_usage || 'N/A'}</div>
+                                <div class="small-info text-primary"><i class="bi bi-clock"></i> ON: ${t.uptime || '---'}</div>
+                            </td>
+                            <td class="small">
+                                <div
+                            class="${t.estado_cargador?.includes('Conectado') ? 'text-success' : 'text-danger'} fw-bold"
+                            ondblclick="abrirHistorialCargador(${t.id})"
+                            style="cursor:pointer;"
+                            title="Doble clic para ver historial">
+
+                            <i class="bi bi-plug"></i> ${t.estado_cargador}
+
+                        </div>
+                                <div class="${t.estado_wifi?.includes('Conectado') ? 'text-primary' : 'text-danger'} fw-bold">
+                                    <i class="bi bi-wifi"></i> ${t.estado_wifi}
+                                </div>
+                                <div class="text-muted mt-1" style="font-size: 0.75rem">
+                                    <i class="bi bi-broadcast"></i> IP: <strong>${t.ip_address || '0.0.0.0'}</strong>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="mb-1">${statusLabel}</div>
+                                <span class="status-badge ${(t.estado || '').toUpperCase() === 'AUTORIZADO' ? 'bg-success-subtle text-success border border-success' : 'bg-danger-subtle text-danger border border-danger'}">
+                                    ${t.estado || 'NO AUTORIZADO'}
+                                </span>
+                            </td>
+                        <td class="small fw-bold">
+                        ${fechaStr}
+                        <br>
+                        <small class="text-muted">
+                            ${esOffline ? tiempoTranscurrido(t.last_connection) : 'Actualizado'}
+                        </small>
+                    </td>
+                            <td class="text-end">
+                                <div class="d-flex flex-column gap-1">
+                                    <!-- BOTÓN GESTIONAR -->
+                                    <button class="btn btn-sm btn-primary fw-bold" onclick="abrirModalEditor('${t.id}', '${t.activo}')">
+                                        <i class="bi bi-shield-lock"></i> GESTIONAR
+                                    </button>
+                                    <div class="btn-group w-100">
+                        <!-- Reiniciar oculto temporalmente -->
+
+                        <button class="btn btn-xs btn-outline-dark w-100"
+                                title="Eliminar"
+                                onclick="eliminarTablet(${t.id})">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
                     });
                     body.innerHTML = html;
                     cargarDashboard();
                 } catch (e) { console.error(e); }
             }
+
+            async function editarNombreDispositivo(id, nombreActual) {
+
+                const resultado = await Swal.fire({
+                    title: "Editar nombre del dispositivo",
+                    html: `
+                        <div class="text-start">
+                            <label class="form-label fw-bold">
+                                Nuevo nombre
+                            </label>
+
+                            <input
+                                id="swal-nombre-dispositivo"
+                                class="form-control"
+                                type="text"
+                                value="${(nombreActual || '').replace(/"/g, '&quot;')}"
+                                autocomplete="off"
+                            >
+                        </div>
+                    `,
+                    icon: "info",
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="bi bi-check-lg"></i> Guardar',
+                    cancelButtonText: "Cancelar",
+                    reverseButtons: true,
+                    focusConfirm: false,
+
+                    didOpen: () => {
+                        const input =
+                            document.getElementById("swal-nombre-dispositivo");
+
+                        input.focus();
+                        input.select();
+                    },
+
+                    preConfirm: () => {
+
+                        const input =
+                            document.getElementById("swal-nombre-dispositivo");
+
+                        const valor = input.value.trim();
+
+                        if (!valor) {
+                            Swal.showValidationMessage(
+                                "El nombre del dispositivo no puede estar vacío."
+                            );
+
+                            return false;
+                        }
+
+                        return valor;
+                    }
+                });
+
+                if (!resultado.isConfirmed) {
+                    return;
+                }
+
+                const nombre = resultado.value;
+
+                if (!nombre) {
+                    Swal.fire({
+                        icon: "warning",
+                        title: "Nombre inválido",
+                        text: "El nombre del dispositivo no puede estar vacío."
+                    });
+                    return;
+                }
+
+                if (nombre === nombreActual.trim()) {
+                    return;
+                }
+
+                Swal.fire({
+                    title: "Actualizando nombre...",
+                    text: "Esperando confirmación de la tablet",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                try {
+
+                    const response = await fetch(`/devices/${id}/nombre`, {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            device_name: nombre
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (!response.ok || data.confirmed === false) {
+
+                        Swal.fire({
+                            icon: "error",
+                            title: "No se pudo actualizar",
+                            text: data.message ||
+                                "La tablet no confirmó el cambio."
+                        });
+
+                        return;
+                    }
+
+                    Swal.fire({
+                        icon: "success",
+                        title: "Nombre actualizado",
+                        text: data.message ||
+                            "La tablet confirmó el cambio.",
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+
+                    await cargarTablets();
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error de conexión",
+                        text: "No se pudo comunicar con el servidor."
+                    });
+                }
+            }
+
+
+            async function editarActivo(id, activoActual) {
+
+                const resultado = await Swal.fire({
+                    title: "Editar código de activo",
+                    html: `
+                        <div class="text-start">
+                            <label class="form-label fw-bold">
+                                Nuevo código de activo
+                            </label>
+
+                            <input
+                                id="swal-activo-dispositivo"
+                                class="form-control"
+                                type="text"
+                                value="${(activoActual || '').replace(/"/g, '&quot;')}"
+                                autocomplete="off"
+                            >
+                        </div>
+                    `,
+                    icon: "info",
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="bi bi-check-lg"></i> Guardar',
+                    cancelButtonText: "Cancelar",
+                    reverseButtons: true,
+                    focusConfirm: false,
+
+                    didOpen: () => {
+
+                        const input =
+                            document.getElementById("swal-activo-dispositivo");
+
+                        input.focus();
+                        input.select();
+                    },
+
+                    preConfirm: () => {
+
+                        const input =
+                            document.getElementById("swal-activo-dispositivo");
+
+                        const valor = input.value.trim();
+
+                        if (!valor) {
+
+                            Swal.showValidationMessage(
+                                "El código de activo no puede estar vacío."
+                            );
+
+                            return false;
+                        }
+
+                        return valor;
+                    }
+                });
+
+                if (!resultado.isConfirmed) {
+                    return;
+                }
+
+                const nuevoActivo = resultado.value;
+
+                // No hubo ningún cambio
+                if (nuevoActivo === activoActual.trim()) {
+                    return;
+                }
+
+                Swal.fire({
+                    title: "Actualizando activo...",
+                    text: "Esperando confirmación de la tablet",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+
+                try {
+
+                    const response = await fetch(
+                        `/devices/${id}/activo`,
+                        {
+                            method: "PUT",
+
+                            headers: {
+                                "Content-Type": "application/json"
+                            },
+
+                            body: JSON.stringify({
+                                activo: nuevoActivo
+                            })
+                        }
+                    );
+
+                    const data = await response.json();
+
+                    if (!response.ok || data.confirmed === false) {
+
+                        let mensaje =
+                            data.message ||
+                            "No se pudo actualizar el activo.";
+
+                        // El activo ya pertenece a otro dispositivo
+                        if (
+                            response.status === 409 &&
+                            data.error === "ACTIVO_DUPLICADO"
+                        ) {
+                            mensaje =
+                                `El activo ${nuevoActivo} ya está asignado a otro dispositivo.`;
+                        }
+
+                        Swal.fire({
+                            icon: "error",
+                            title: "No se pudo actualizar",
+                            text: mensaje
+                        });
+
+                        return;
+                    }
+
+                    await cargarTablets();
+
+                    Swal.fire({
+                        icon: "success",
+                        title: "Activo actualizado",
+                        text:
+                            data.message ||
+                            "La tablet confirmó el cambio.",
+                        timer: 1800,
+                        showConfirmButton: false
+                    });
+
+                } catch (error) {
+
+                    console.error(error);
+
+                    Swal.fire({
+                        icon: "error",
+                        title: "Error de conexión",
+                        text: "No se pudo comunicar con el servidor."
+                    });
+                }
+            }
+
 
             function tiempoTranscurrido(fecha) {
 
