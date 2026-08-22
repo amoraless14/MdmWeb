@@ -39,4 +39,8 @@ public interface TareaProgramadaService {
             String estado,
             Pageable pageable);
 
+    void confirmarActualizacion(Long tabletId);
+
+    void procesarActualizacionPendiente(Long tabletId);
+
 }

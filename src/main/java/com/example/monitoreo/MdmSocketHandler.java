@@ -6,6 +6,7 @@ import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import Entidad.Tablet;
 import repository.TabletRepository;
+import service.TareaProgramadaService;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.Set;
@@ -17,13 +18,20 @@ public class MdmSocketHandler extends TextWebSocketHandler {
 
     private static final Map<String, CompletableFuture<Boolean>> updatePendientes = new ConcurrentHashMap<>();
 
+    private static final ConcurrentHashMap<String, Boolean> actualizacionesEnviadas = new ConcurrentHashMap<>();
+
     private static final Map<String, String> updateMensajes = new ConcurrentHashMap<>();
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final TabletRepository tabletRepository;
 
-    public MdmSocketHandler(TabletRepository tabletRepository) {
+    private final TareaProgramadaService tareaProgramadaService;
+
+    public MdmSocketHandler(
+            TabletRepository tabletRepository,
+            TareaProgramadaService tareaProgramadaService) {
         this.tabletRepository = tabletRepository;
+        this.tareaProgramadaService = tareaProgramadaService;
     }
 
     @Override
@@ -35,6 +43,34 @@ public class MdmSocketHandler extends TextWebSocketHandler {
         sessions.put(id, session);
 
         System.out.println("Tablet conectada al túnel: " + id);
+
+        try {
+
+            Long tabletId = Long.valueOf(id);
+
+            CompletableFuture.runAsync(() -> {
+
+                try {
+
+                    tareaProgramadaService
+                            .procesarActualizacionPendiente(tabletId);
+
+                } catch (Exception e) {
+
+                    System.out.println(
+                            "Error procesando actualización pendiente | Tablet "
+                                    + tabletId
+                                    + " | "
+                                    + e.getMessage());
+                }
+            });
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "No se pudo verificar actualización pendiente | Tablet "
+                            + id);
+        }
     }
 
     @Override
@@ -61,7 +97,11 @@ public class MdmSocketHandler extends TextWebSocketHandler {
                 String status = json.path("status").asText();
                 String mensaje = json.path("message").asText("");
 
-                String deviceId = obtenerDeviceIdPorSession(session);
+                String deviceId = json.path("deviceId").asText("");
+
+                if (deviceId.isBlank()) {
+                    deviceId = obtenerDeviceIdPorSession(session);
+                }
 
                 System.out.println(
                         "ACK RECIBIDO TABLET " + deviceId
@@ -95,6 +135,23 @@ public class MdmSocketHandler extends TextWebSocketHandler {
                             future.complete(true);
                         }
 
+                        // Confirmar también la tarea en la base de datos
+                        try {
+
+                            Long tabletId = Long.valueOf(deviceId);
+
+                            tareaProgramadaService.confirmarActualizacion(
+                                    tabletId);
+
+                        } catch (Exception e) {
+
+                            System.out.println(
+                                    "ERROR confirmando tarea de actualización | Tablet "
+                                            + deviceId
+                                            + " | "
+                                            + e.getMessage());
+                        }
+
                     } else if ("error".equals(status)
                             || status.startsWith("error_")) {
 
@@ -108,7 +165,6 @@ public class MdmSocketHandler extends TextWebSocketHandler {
                     return;
                 }
 
-            
                 // RESTO DE COMANDOS
                 CompletableFuture<Boolean> future = ackPendientes.remove(key);
 
@@ -185,35 +241,67 @@ public class MdmSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    public static boolean enviarOrdenConAck(String deviceId, String json, String command) {
+    public static boolean enviarOrdenConAck(
+            String deviceId,
+            String json,
+            String command) {
+
+        String key = deviceId + ":" + command;
 
         try {
 
             WebSocketSession session = sessions.get(deviceId);
 
             if (session == null || !session.isOpen()) {
-                System.out.println("Tablet " + deviceId + " no está conectada al túnel");
+
+                System.out.println(
+                        "Tablet " + deviceId +
+                                " no está conectada al túnel");
+
                 return false;
             }
 
-            String key = deviceId + ":" + command;
-
             CompletableFuture<Boolean> future = new CompletableFuture<>();
+
             ackPendientes.put(key, future);
 
-            session.sendMessage(new TextMessage(json));
+            session.sendMessage(
+                    new TextMessage(json));
 
-            System.out.println("Orden enviada a tablet " + deviceId);
+            System.out.println(
+                    "Orden enviada a tablet " +
+                            deviceId +
+                            " | comando=" + command);
 
-            return future.get(10, TimeUnit.SECONDS);
+            return future.get(
+                    10,
+                    TimeUnit.SECONDS);
 
         } catch (TimeoutException e) {
-            System.out.println("La tablet " + deviceId + " no confirmó el comando a tiempo");
+
+            System.out.println(
+                    "Tablet " + deviceId +
+                            " no confirmó " +
+                            command +
+                            " dentro de 10 segundos");
+
             return false;
 
         } catch (Exception e) {
+
+            System.err.println(
+                    "Error enviando " +
+                            command +
+                            " a tablet " +
+                            deviceId);
+
             e.printStackTrace();
+
             return false;
+
+        } finally {
+
+            ackPendientes.remove(key);
         }
     }
 
@@ -231,8 +319,8 @@ public class MdmSocketHandler extends TextWebSocketHandler {
             if (session == null || !session.isOpen()) {
 
                 System.out.println(
-                        "Tablet " + deviceId
-                                + " no está conectada para actualizar");
+                        "Tablet " + deviceId +
+                                " no está conectada para actualizar");
 
                 return false;
             }
@@ -250,30 +338,34 @@ public class MdmSocketHandler extends TextWebSocketHandler {
             session.sendMessage(
                     new TextMessage(json));
 
+            actualizacionesEnviadas.put(deviceId, true);
+
             System.out.println(
                     "ACTUALIZACIÓN ENVIADA A TABLET "
                             + deviceId
                             + " URL: "
                             + apkUrl);
 
-            // Esperamos descarga + instalación real
             return future.get(
                     5,
                     TimeUnit.MINUTES);
 
         } catch (TimeoutException e) {
 
-            updatePendientes.remove(key);
-
             System.out.println(
-                    "Tablet " + deviceId
-                            + " no confirmó la instalación en 5 minutos");
+                    "Tablet " + deviceId +
+                            " sigue pendiente de confirmación después de 5 minutos");
 
             return false;
 
         } catch (Exception e) {
 
             updatePendientes.remove(key);
+
+            System.err.println(
+                    "Error enviando actualización a tablet "
+                            + deviceId);
+
             e.printStackTrace();
 
             return false;
@@ -356,4 +448,16 @@ public class MdmSocketHandler extends TextWebSocketHandler {
     public static Set<String> obtenerTabletsConectadas() {
         return sessions.keySet();
     }
+
+    public static boolean estaTabletConectada(String deviceId) {
+
+        WebSocketSession session = sessions.get(deviceId);
+
+        return session != null && session.isOpen();
+    }
+
+    public static boolean fueActualizacionEnviada(String deviceId) {
+        return actualizacionesEnviadas.remove(deviceId) != null;
+    }
+
 }

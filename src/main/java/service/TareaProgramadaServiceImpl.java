@@ -10,6 +10,8 @@ import Enums.DestinoTarea;
 import Enums.EstadoTarea;
 import Enums.EstadoTareaDispositivo;
 import Enums.TipoProgramacion;
+import Enums.TipoTarea;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +30,7 @@ import jakarta.annotation.PostConstruct;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -36,6 +39,9 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import java.util.concurrent.ExecutorService;
+
+import java.util.concurrent.Future;
 
 @Service
 public class TareaProgramadaServiceImpl implements TareaProgramadaService {
@@ -283,76 +289,193 @@ public class TareaProgramadaServiceImpl implements TareaProgramadaService {
 
         boolean huboErrores = false;
 
+        ExecutorService executor = Executors.newFixedThreadPool(20);
+
+        List<Future<Boolean>> resultados = new ArrayList<>();
+
         for (TareaProgramadaDispositivo dispositivo : dispositivos) {
 
-            dispositivo.setEstado(EstadoTareaDispositivo.ENVIADA);
-            tareaProgramadaDispositivoRepository.save(dispositivo);
+            Future<Boolean> future = executor.submit(() -> {
 
-            boolean ack;
+                try {
 
-            switch (tarea.getTipoTarea()) {
+                    dispositivo.setEstado(
+                            EstadoTareaDispositivo.ENVIADA);
 
-                case REINICIO -> {
+                    tareaProgramadaDispositivoRepository.save(
+                            dispositivo);
 
-                    ack = MdmSocketHandler.enviarOrdenConAck(
-                            dispositivo.getTablet().getId().toString(),
-                            "{\"pending_command\":\"reboot\"}",
-                            "reboot");
-                }
+                    boolean ack;
 
-                case ACTUALIZAR_APP -> {
+                    switch (tarea.getTipoTarea()) {
 
-                    String apkUrl = tarea.getParametros();
+                        case REINICIO -> {
 
-                    if (apkUrl == null || apkUrl.isBlank()) {
+                            ack = MdmSocketHandler.enviarOrdenConAck(
+                                    dispositivo.getTablet().getId().toString(),
+                                    "{\"pending_command\":\"reboot\"}",
+                                    "reboot");
+                        }
 
-                        System.out.println(
-                                "Tarea " + tarea.getId()
-                                        + " no tiene URL del APK");
+                        case ACTUALIZAR_APP -> {
 
-                        ack = false;
+                            String apkUrl = tarea.getParametros();
+
+                            if (apkUrl == null ||
+                                    apkUrl.isBlank()) {
+
+                                System.out.println(
+                                        "Tarea " + tarea.getId()
+                                                + " no tiene URL del APK");
+
+                                ack = false;
+
+                            } else {
+
+                                System.out.println(
+                                        "Actualizando tablet "
+                                                + dispositivo.getTablet().getId()
+                                                + " desde "
+                                                + apkUrl);
+
+                                ack = MdmSocketHandler
+                                        .enviarActualizacionConAck(
+                                                dispositivo
+                                                        .getTablet()
+                                                        .getId()
+                                                        .toString(),
+                                                apkUrl);
+                            }
+                        }
+
+                        default -> {
+
+                            System.out.println(
+                                    "Tipo de tarea todavía no implementado: "
+                                            + tarea.getTipoTarea());
+
+                            ack = false;
+                        }
+                    }
+
+                    if (ack) {
+
+                        dispositivo.setEstado(
+                                EstadoTareaDispositivo.CONFIRMADA);
+
+                        dispositivo.setConfirmado(true);
+
+                        dispositivo.setFechaEjecucion(
+                                LocalDateTime.now());
 
                     } else {
 
-                        System.out.println(
-                                "Actualizando tablet "
-                                        + dispositivo.getTablet().getId()
-                                        + " desde "
-                                        + apkUrl);
+                        String deviceId = dispositivo.getTablet()
+                                .getId()
+                                .toString();
 
-                        ack = MdmSocketHandler.enviarActualizacionConAck(
-                                dispositivo.getTablet().getId().toString(),
-                                apkUrl);
+                        if (tarea.getTipoTarea() == TipoTarea.ACTUALIZAR_APP) {
+
+                            boolean fueEnviada = MdmSocketHandler.fueActualizacionEnviada(deviceId);
+
+                            if (fueEnviada) {
+
+                                dispositivo.setEstado(
+                                        EstadoTareaDispositivo.ENVIADA);
+
+                                dispositivo.setConfirmado(false);
+
+                                System.out.println(
+                                        "TAREA ACTUALIZACION | Tablet "
+                                                + deviceId
+                                                + " pendiente de confirmacion final");
+
+                            } else {
+
+                                dispositivo.setEstado(
+                                        EstadoTareaDispositivo.SIN_CONEXION);
+
+                                dispositivo.setConfirmado(false);
+
+                                System.out.println(
+                                        "TAREA ACTUALIZACION | Tablet "
+                                                + deviceId
+                                                + " no recibio el comando");
+                            }
+
+                        } else {
+
+                            boolean conectado = MdmSocketHandler.estaTabletConectada(deviceId);
+
+                            if (!conectado) {
+
+                                dispositivo.setEstado(
+                                        EstadoTareaDispositivo.SIN_CONEXION);
+
+                                System.out.println(
+                                        "TAREA | Tablet "
+                                                + deviceId
+                                                + " SIN CONEXION");
+
+                            } else {
+
+                                dispositivo.setEstado(
+                                        EstadoTareaDispositivo.ERROR);
+
+                                System.out.println(
+                                        "TAREA | Tablet "
+                                                + deviceId
+                                                + " conectada pero SIN CONFIRMACION");
+                            }
+
+                            dispositivo.setConfirmado(false);
+                        }
                     }
+
+                    tareaProgramadaDispositivoRepository.save(
+                            dispositivo);
+
+                    return ack;
+
+                } catch (Exception e) {
+
+                    e.printStackTrace();
+
+                    dispositivo.setEstado(
+                            EstadoTareaDispositivo.ERROR);
+
+                    dispositivo.setConfirmado(false);
+
+                    tareaProgramadaDispositivoRepository.save(
+                            dispositivo);
+
+                    return false;
                 }
+            });
 
-                default -> {
-
-                    System.out.println(
-                            "Tipo de tarea todavía no implementado: "
-                                    + tarea.getTipoTarea());
-
-                    ack = false;
-                }
-            }
-
-            if (ack) {
-
-                dispositivo.setEstado(EstadoTareaDispositivo.CONFIRMADA);
-                dispositivo.setConfirmado(true);
-                dispositivo.setFechaEjecucion(LocalDateTime.now());
-
-            } else {
-
-                dispositivo.setEstado(EstadoTareaDispositivo.SIN_CONEXION);
-                dispositivo.setConfirmado(false);
-
-                huboErrores = true;
-            }
-
-            tareaProgramadaDispositivoRepository.save(dispositivo);
+            resultados.add(future);
         }
 
+        for (Future<Boolean> resultado : resultados) {
+
+            try {
+
+                boolean resultadoOk = resultado.get();
+
+                if (!resultadoOk &&
+                        tarea.getTipoTarea() != TipoTarea.ACTUALIZAR_APP) {
+
+                    huboErrores = true;
+                }
+
+            } catch (Exception e) {
+
+                huboErrores = true;
+                e.printStackTrace();
+            }
+        }
+
+        executor.shutdown();
         tarea.setFechaEjecucion(LocalDateTime.now());
 
         if (tarea.getTipoProgramacion() == TipoProgramacion.UNA_VEZ) {
@@ -378,6 +501,166 @@ public class TareaProgramadaServiceImpl implements TareaProgramadaService {
 
             programar(tarea.getId());
 
+        }
+    }
+
+    @Override
+    @Transactional
+    public void confirmarActualizacion(Long tabletId) {
+
+        List<TareaProgramadaDispositivo> pendientes = tareaProgramadaDispositivoRepository
+                .findByTabletIdAndEstadoOrderByIdDesc(
+                        tabletId,
+                        EstadoTareaDispositivo.ENVIADA);
+
+        for (TareaProgramadaDispositivo dispositivo : pendientes) {
+
+            if (dispositivo.getTareaProgramada() == null) {
+                continue;
+            }
+
+            TareaProgramada tarea = dispositivo.getTareaProgramada();
+
+            if (tarea.getTipoTarea() != TipoTarea.ACTUALIZAR_APP) {
+                continue;
+            }
+
+            dispositivo.setEstado(
+                    EstadoTareaDispositivo.CONFIRMADA);
+
+            dispositivo.setConfirmado(true);
+
+            dispositivo.setFechaEjecucion(
+                    LocalDateTime.now());
+
+            tareaProgramadaDispositivoRepository.save(
+                    dispositivo);
+
+            System.out.println(
+                    "TAREA ACTUALIZACION CONFIRMADA | Tablet "
+                            + tabletId
+                            + " | Tarea "
+                            + tarea.getId());
+
+            // Revisar el estado completo de la tarea
+            List<TareaProgramadaDispositivo> todos = tareaProgramadaDispositivoRepository
+                    .findByTareaProgramadaId(
+                            tarea.getId());
+
+            boolean quedanPendientes = false;
+            boolean hayErrores = false;
+
+            for (TareaProgramadaDispositivo item : todos) {
+
+                if (item.getEstado() == EstadoTareaDispositivo.ENVIADA) {
+
+                    quedanPendientes = true;
+                }
+
+                if (item.getEstado() == EstadoTareaDispositivo.ERROR ||
+                        item.getEstado() == EstadoTareaDispositivo.SIN_CONEXION) {
+
+                    hayErrores = true;
+                }
+            }
+
+            if (!quedanPendientes) {
+
+                if (hayErrores) {
+
+                    tarea.setEstado(
+                            EstadoTarea.COMPLETADA_CON_ERRORES);
+
+                } else {
+
+                    tarea.setEstado(
+                            EstadoTarea.COMPLETADA);
+                }
+
+                tarea.setFechaEjecucion(
+                        LocalDateTime.now());
+
+                tareaProgramadaRepository.save(tarea);
+
+                System.out.println(
+                        "TAREA ACTUALIZACION FINALIZADA | Tarea "
+                                + tarea.getId()
+                                + " | Estado "
+                                + tarea.getEstado());
+
+            } else {
+
+                System.out.println(
+                        "TAREA ACTUALIZACION | Tarea "
+                                + tarea.getId()
+                                + " todavía tiene dispositivos pendientes");
+            }
+
+            return;
+        }
+
+        System.out.println(
+                "ACK update_app success recibido de tablet "
+                        + tabletId
+                        + " pero no existe tarea ACTUALIZAR_APP ENVIADA");
+    }
+
+    @Override
+    @Transactional
+    public void procesarActualizacionPendiente(Long tabletId) {
+
+        List<TareaProgramadaDispositivo> pendientes = tareaProgramadaDispositivoRepository
+                .findByTabletIdAndEstadoOrderByIdDesc(
+                        tabletId,
+                        EstadoTareaDispositivo.SIN_CONEXION);
+
+        for (TareaProgramadaDispositivo dispositivo : pendientes) {
+
+            TareaProgramada tarea = dispositivo.getTareaProgramada();
+
+            if (tarea == null) {
+                continue;
+            }
+
+            if (tarea.getTipoTarea() != TipoTarea.ACTUALIZAR_APP) {
+                continue;
+            }
+
+            String apkUrl = tarea.getParametros();
+
+            if (apkUrl == null || apkUrl.isBlank()) {
+
+                System.out.println(
+                        "ACTUALIZACION PENDIENTE SIN URL | Tablet "
+                                + tabletId
+                                + " | Tarea "
+                                + tarea.getId());
+
+                continue;
+            }
+
+            dispositivo.setEstado(
+                    EstadoTareaDispositivo.ENVIADA);
+
+            dispositivo.setConfirmado(false);
+
+            tareaProgramadaDispositivoRepository.save(
+                    dispositivo);
+
+            System.out.println(
+                    "TABLET RECONECTADA | Reintentando actualización | Tablet "
+                            + tabletId
+                            + " | Tarea "
+                            + tarea.getId());
+
+            CompletableFuture.runAsync(() -> {
+
+                MdmSocketHandler.enviarActualizacionConAck(
+                        tabletId.toString(),
+                        apkUrl);
+            });
+
+            return;
         }
     }
 
